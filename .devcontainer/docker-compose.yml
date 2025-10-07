@@ -13,7 +13,7 @@ services:
       - ..:/app
       - ./logs:/var/log
     # command: sleep infinity
-    command: flask run --host=0.0.0.0 --port=5000
+    command: bash -c "sleep 10 && flask run --host=0.0.0.0 --port=5000"
     ports:
       - "8080:5000"         # ✅ host 8080 -> container 5000
     environment:
