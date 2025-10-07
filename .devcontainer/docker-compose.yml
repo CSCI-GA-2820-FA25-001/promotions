@@ -14,12 +14,12 @@ services:
       - ./logs:/var/log
     command: sleep infinity
     ports:
-      - "8080:8080" 
+      - "8080:5000"  # ✅ host:container，Flask runs on 5000 inside
     environment:
-      PORT: 8080
+      PORT: 5000 # ✅ keep Flask default internal port
       FLASK_APP: wsgi:app
       FLASK_DEBUG: "True"
-      GUNICORN_BIND: "0.0.0.0:8080"
+      GUNICORN_BIND: "0.0.0.0:5000"
       DATABASE_URI: mysql+pymysql://appuser:appuserpass@mysql:3306/mydb
       # ⬇️ add new MySQL connect parameters
       MYSQL_HOST: mysql
