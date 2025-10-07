@@ -168,7 +168,7 @@ class Promotion(db.Model):
             name="chk_discount_value_valid"
         ),
         CheckConstraint(
-            "expiration_date > start_date",
+            "expiration_date >= start_date",
             name="chk_expiration_after_start"
         ),
         CheckConstraint(
@@ -198,4 +198,24 @@ class Promotion(db.Model):
     def find_by_name(cls, name):
         """Find Promotions by product_name."""
         return cls.query.filter_by(product_name=name).all()
+    
+    @classmethod
+    def find_by_status(cls, status):
+        """Find Promotions by product_name."""
+        return cls.query.filter_by(status=status).all()
+    
+    @classmethod
+    def find_by_discount_type(cls, discount_type):
+        """Find Promotions by product_name."""
+        return cls.query.filter_by(discount_type=discount_type).all()
+
+    @classmethod
+    def find_by_expiration_date(cls, expiration_date):
+        """Find Promotions by product_name."""
+        return cls.query.filter_by(expiration_date=expiration_date).all()
+
+    @classmethod
+    def find_by_promotion_type(cls, promotion_type):
+        """Find Promotions by product_name."""
+        return cls.query.filter_by(promotion_type=promotion_type).all()
 
