@@ -5,7 +5,10 @@ All of the models are stored in this module
 """
 
 import logging
+from datetime import datetime
+from enum import Enum
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import CheckConstraint, Index, Enum as SQLEnum, func
 
 logger = logging.getLogger("flask.app")
 
@@ -16,6 +19,71 @@ db = SQLAlchemy()
 class DataValidationError(Exception):
     """Used for an data validation errors when deserializing"""
 
+
+class DiscountTypeEnum(str, Enum):
+    amount = "amount"
+    percent = "percent"
+
+class PromotionTypeEnum(str, Enum):
+    discount = "discount"
+    other = "other"
+
+class StatusEnum(str, Enum):
+    draft = "draft"
+    active = "active"
+    expired = "expired"
+    deactivated = "deactivated"
+    deleted = "deleted"
+
+class Promotion(db.Model):
+    __tablename__ = "promotions"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    product_name = db.Column(db.String(255), nullable=False, unique=True)
+    description = db.Column(db.String(1024), nullable=True)
+    original_price = db.Column(db.Numeric(10, 2), nullable=False)
+    discount_value = db.Column(db.Numeric(10, 2), nullable=True)
+    discount_type = db.Column(SQLEnum(DiscountTypeEnum), nullable=True)
+    promotion_type = db.Column(SQLEnum(PromotionTypeEnum), nullable=False)
+    start_date = db.Column(db.DateTime, nullable=True, default=datetime.now)
+    expiration_date = db.Column(db.DateTime, nullable=False)
+    status = db.Column(SQLEnum(StatusEnum), nullable=False, default=StatusEnum.draft)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
+    updated_at = db.Column(db.DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_promotions_status", "status"), #accelerate status search（like WHERE status = 'active'）
+        Index("ix_promotions_expiration_date", "expiration_date"), #accelerate expiration_date search
+        Index("ix_promotions_name", "product_name"), #accelerate product_name search
+        Index("ix_promotions_type", "promotion_type"), #accelerate promotion_type search
+        Index("ix_promotions_discount_type", "discount_type"), #accelerate discount_type search
+        CheckConstraint("original_price > 0", name="chk_original_price_positive"),
+        CheckConstraint(
+            "(discount_type IS NULL AND discount_value IS NULL) OR "
+            "(discount_type='amount' AND discount_value <= original_price) OR "
+            "(discount_type='percent' AND discount_value >= 0 AND discount_value <= 100)",
+            name="chk_discount_value_valid"
+        ),
+        CheckConstraint(
+            "expiration_date > start_date",
+            name="chk_expiration_after_start"
+        ),
+        CheckConstraint(
+            "(promotion_type='other' AND discount_value IS NULL AND discount_type IS NULL)"
+            "OR (promotion_type = 'discount')",
+            name="chk_promotion_type_after_start"
+        ),
+    )
+
+    @property
+    def discounted_price(self):
+        if self.promotion_type != PromotionTypeEnum.discount or not self.discount_value:
+            return self.original_price
+        if self.discount_type == DiscountTypeEnum.amount:
+            return max(self.original_price - self.discount_value, 0)
+        elif self.discount_type == DiscountTypeEnum.percent:
+            return max(self.original_price * (1 - self.discount_value / 100), 0)
+        return self.original_price
 
 class YourResourceModel(db.Model):
     """
