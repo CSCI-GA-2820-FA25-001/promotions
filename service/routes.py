@@ -23,18 +23,29 @@ and Delete YourResourceModel
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import YourResourceModel
+from service.models import Promotion, db #YourResourceModel
 from service.common import status  # HTTP Status Codes
+import logging
+
+
+logger = logging.getLogger("flask.app")
 
 
 ######################################################################
-# GET INDEX
+# GET INDEX (#10 Root URL)
 ######################################################################
 @app.route("/")
 def index():
     """Root URL response"""
+    logger.info("Root URL accessed.")
     return (
-        "Reminder: return some useful information in json format about the service here",
+        jsonify(
+            name="Promotions REST API Service",
+            version="1.0",
+            endpoints={
+                "list_promotions": url_for("list_promotions", _external=True),
+            },
+        ),
         status.HTTP_200_OK,
     )
 
@@ -44,3 +55,17 @@ def index():
 ######################################################################
 
 # Todo: Place your REST API code here ...
+
+######################################################################
+# LIST PROMOTIONS (#8)
+######################################################################
+@app.route("/promotions", methods=["GET"])
+def list_promotions():
+    """
+    Returns a list of all promotions in JSON format
+    GET /promotions
+    """
+    logger.info("Request for promotion list received.")
+    promotions = Promotion.query.all()
+    results = [promo.serialize() for promo in promotions]
+    return jsonify(results), status.HTTP_200_OK
