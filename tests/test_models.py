@@ -33,7 +33,7 @@ from unittest.mock import patch
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI",
-    "mysql+pymysql://root:root@localhost:3306/testdb"  # ← 修改成你本地或 Docker 的测试数据库
+    "mysql+pymysql://root:root@localhost:3306/testdb" 
 )
 
 ######################################################################
