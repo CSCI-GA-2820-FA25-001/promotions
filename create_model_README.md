@@ -91,6 +91,10 @@ gunicorn wsgi:app -b 0.0.0.0:8080 --reload
   - `all()`: Returns all promotions
   - `find(id)`: Find promotion by ID
   - `find_by_name(name)`: Find promotions by product name
+  - `find_by_status(status)`: Find promotions by status
+  - `find_by_expiration_date(expiration_date)`: Find promotions by expiration_date
+  - `find_by_promotion_type(promotion_type)`: Find promotions by promotion_type
+  - `find_by_discount_type(discount_type)`: Find promotions by discount_type
 
 
 ## Testing
