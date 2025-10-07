@@ -1,0 +1,18 @@
+# Core dependencies
+flask
+flask_sqlalchemy
+flask_migrate
+python-dotenv
+
+# Testing
+pytest
+coverage
+
+# HTTP utilities
+requests
+
+# Code quality (optional but recommended)
+flake8
+
+# Deployment (optional, for Heroku/Docker)
+gunicorn
