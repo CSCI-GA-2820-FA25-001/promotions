@@ -47,10 +47,11 @@ cd .devcontainer
 docker-compose up -d --build
 ```
 
-3. **activate the container bash**
+3. **activate the container bash and build the depends**
 
 ```shell
 docker exec -it nyu-project bash #the container's name is nyu-project
+pip install requirements.txt
 ```
 
 4. **initialize the Database**
