@@ -123,7 +123,6 @@ class Promotion(db.Model):
             for field in required_fields:
                 if field not in data:
                     raise DataValidationError(f"Missing required field: {field}")
-            # -------- 数据类型验证 --------
             if not isinstance(data["product_name"], str):
                 raise DataValidationError("Invalid data type for 'product_name'; expected string")
             if not isinstance(data["original_price"], (int, float, Decimal)):
@@ -155,11 +154,11 @@ class Promotion(db.Model):
         return self
 
     __table_args__ = (
-        Index("ix_promotions_status", "status"), #加速基于 status 列的查询（例如 WHERE status = 'active'）
-        Index("ix_promotions_expiration_date", "expiration_date"), #加速基于 expiration_date 列的查询
-        Index("ix_promotions_name", "product_name"), #加速基于product_name列的查询
-        Index("ix_promotions_type", "promotion_type"), #加速基于promotion_type列的查询
-        Index("ix_promotions_discount_type", "discount_type"), #加速基于discount_type列的查询
+        Index("ix_promotions_status", "status"), 
+        Index("ix_promotions_expiration_date", "expiration_date"), 
+        Index("ix_promotions_name", "product_name"),
+        Index("ix_promotions_type", "promotion_type"), 
+        Index("ix_promotions_discount_type", "discount_type"), 
         CheckConstraint("original_price > 0", name="chk_original_price_positive"),
         CheckConstraint(
             "(discount_type IS NULL AND discount_value IS NULL) OR "
@@ -184,7 +183,7 @@ class Promotion(db.Model):
         
     @classmethod
     def all(cls):
-        """返回数据库中所有 Promotion 对象"""
+        """return all the Promotion fields"""
         logger.info("Processing all YourResourceModels")
         return cls.query.all()
     
