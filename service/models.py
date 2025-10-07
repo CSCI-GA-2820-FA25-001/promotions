@@ -84,6 +84,24 @@ class Promotion(db.Model):
         elif self.discount_type == DiscountTypeEnum.percent:
             return max(self.original_price * (1 - self.discount_value / 100), 0)
         return self.original_price
+    def serialize(self):
+        """Serializes a Promotion into a JSON-friendly dictionary"""
+        return {
+            "id": self.id,
+            "product_name": self.product_name,
+            "description": self.description,
+            "original_price": float(self.original_price),
+            "discount_value": float(self.discount_value) if self.discount_value is not None else None,
+            "discount_type": self.discount_type.value if self.discount_type else None,
+            "promotion_type": self.promotion_type.value,
+            "start_date": self.start_date.isoformat() if self.start_date else None,
+            "expiration_date": self.expiration_date.isoformat(),
+            "status": self.status.value,
+            "discounted_price": float(self.discounted_price),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 
 class YourResourceModel(db.Model):
     """
