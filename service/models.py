@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import CheckConstraint, Index, Enum as SQLEnum, func
-
+from decimal import Decimal
 logger = logging.getLogger("flask.app")
 
 # Create the SQLAlchemy object to be initialized later in init_db()
@@ -18,7 +18,9 @@ db = SQLAlchemy()
 
 class DataValidationError(Exception):
     """Used for an data validation errors when deserializing"""
-
+    def __init__(self, message):
+        """Create an instance with a meaningful error message"""
+        super().__init__(message)
 
 class DiscountTypeEnum(str, Enum):
     amount = "amount"
@@ -51,12 +53,113 @@ class Promotion(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
     updated_at = db.Column(db.DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
+    @property
+    def discounted_price(self):
+        if self.promotion_type != PromotionTypeEnum.discount or not self.discount_value:
+            return self.original_price
+        if self.discount_type == DiscountTypeEnum.amount:
+            return max(self.original_price - self.discount_value, 0)
+        elif self.discount_type == DiscountTypeEnum.percent:
+            return max(Decimal(self.original_price) * Decimal(1 - self.discount_value / 100), 0)
+        return self.original_price
+
+    def create(self):
+        logger.info("Creating %s", self.product_name)
+        db.session.add(self)
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Error updating record: %s", self)
+            raise DataValidationError(e) from e
+
+    def update(self):
+        logger.info("update %s", self.product_name)
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Error updating record: %s", self)
+            raise DataValidationError(e) from e
+
+    def delete(self):
+        logger.info("delete %s", self.product_name)
+        db.session.delete(self)
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Error updating record: %s", self)
+            raise DataValidationError(e) from e
+        
+    
+
+    def serialize(self):
+        """Serializes a Promotion into a JSON-friendly dictionary"""
+        return {
+            "id": self.id,
+            "product_name": self.product_name,
+            "description": self.description,
+            "original_price": float(self.original_price),
+            "discount_value": float(self.discount_value) if self.discount_value is not None else None,
+            "discount_type": self.discount_type.value if self.discount_type else None,
+            "promotion_type": self.promotion_type.value,
+            "start_date": self.start_date.isoformat() if self.start_date else None,
+            "expiration_date": self.expiration_date.isoformat(),
+            "status": self.status.value,
+            "discounted_price": float(self.discounted_price),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+    def deserialize(self, data):
+        """
+        Deserializes a Promotion from a dictionary
+
+        Args:
+            data (dict): A dictionary containing the promotion data
+        """
+        try:
+            required_fields = ["product_name", "original_price", "promotion_type", "expiration_date"]
+            for field in required_fields:
+                if field not in data:
+                    raise DataValidationError(f"Missing required field: {field}")
+            # -------- 数据类型验证 --------
+            if not isinstance(data["product_name"], str):
+                raise DataValidationError("Invalid data type for 'product_name'; expected string")
+            if not isinstance(data["original_price"], (int, float, Decimal)):
+                raise DataValidationError("Invalid data type for 'original_price'; expected numeric")
+            if data.get("discount_value") is not None and not isinstance(data["discount_value"], (int, float, Decimal)):
+                raise DataValidationError("Invalid data type for 'discount_value'; expected numeric")
+            if data.get("description") and not isinstance(data["description"], str):
+                raise DataValidationError("Invalid data type for 'description'; expected string")
+            if data.get("promotion_type") == PromotionTypeEnum.other and data.get("discount_value") is not None:
+                raise DataValidationError("the discount_value should be None")
+            if data.get("promotion_type") == PromotionTypeEnum.other and data.get("discount_type") is not None:
+                raise DataValidationError("the discount_type should be None")
+            self.product_name = data["product_name"]
+            self.description = data.get("description")
+            self.original_price = data["original_price"]
+            self.discount_value = data.get("discount_value")
+            self.discount_type = DiscountTypeEnum(data["discount_type"]) if data.get("discount_type") else None
+            self.promotion_type = PromotionTypeEnum(data["promotion_type"]) if data.get("promotion_type") else None
+            self.start_date = datetime.fromisoformat(data["start_date"]) if data.get("start_date") else datetime.now()
+            self.expiration_date = datetime.fromisoformat(data["expiration_date"])
+            self.status = StatusEnum(data["status"]) if data.get("status") else StatusEnum.draft
+        
+        except KeyError as error:
+            raise DataValidationError(f"Missing required field: {error.args[0]}") from error
+        except ValueError as error:
+            raise DataValidationError(f"Invalid field value: {error}") from error
+        except TypeError as error:
+            raise DataValidationError(f"Invalid input data type: {error}") from error
+        return self
+
     __table_args__ = (
-        Index("ix_promotions_status", "status"), #accelerate status search（like WHERE status = 'active'）
-        Index("ix_promotions_expiration_date", "expiration_date"), #accelerate expiration_date search
-        Index("ix_promotions_name", "product_name"), #accelerate product_name search
-        Index("ix_promotions_type", "promotion_type"), #accelerate promotion_type search
-        Index("ix_promotions_discount_type", "discount_type"), #accelerate discount_type search
+        Index("ix_promotions_status", "status"), #加速基于 status 列的查询（例如 WHERE status = 'active'）
+        Index("ix_promotions_expiration_date", "expiration_date"), #加速基于 expiration_date 列的查询
+        Index("ix_promotions_name", "product_name"), #加速基于product_name列的查询
+        Index("ix_promotions_type", "promotion_type"), #加速基于promotion_type列的查询
+        Index("ix_promotions_discount_type", "discount_type"), #加速基于discount_type列的查询
         CheckConstraint("original_price > 0", name="chk_original_price_positive"),
         CheckConstraint(
             "(discount_type IS NULL AND discount_value IS NULL) OR "
@@ -75,123 +178,16 @@ class Promotion(db.Model):
         ),
     )
 
-    @property
-    def discounted_price(self):
-        if self.promotion_type != PromotionTypeEnum.discount or not self.discount_value:
-            return self.original_price
-        if self.discount_type == DiscountTypeEnum.amount:
-            return max(self.original_price - self.discount_value, 0)
-        elif self.discount_type == DiscountTypeEnum.percent:
-            return max(self.original_price * (1 - self.discount_value / 100), 0)
-        return self.original_price
-    def serialize(self):
-        """Serializes a Promotion into a JSON-friendly dictionary"""
-        return {
-            "id": self.id,
-            "product_name": self.product_name,
-            "description": self.description,
-            "original_price": float(self.original_price),
-            "discount_value": float(self.discount_value) if self.discount_value is not None else None,
-            "discount_type": self.discount_type.value if self.discount_type else None,
-            "promotion_type": self.promotion_type.value,
-            "start_date": self.start_date.isoformat() if self.start_date else None,
-            "expiration_date": self.expiration_date.isoformat(),
-            "status": self.status.value,
-            "discounted_price": float(self.discounted_price),
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
+    
 
-
-class YourResourceModel(db.Model):
-    """
-    Class that represents a YourResourceModel
-    """
-
-    ##################################################
-    # Table Schema
-    ##################################################
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(63))
-
-    # Todo: Place the rest of your schema here...
-
-    def __repr__(self):
-        return f"<YourResourceModel {self.name} id=[{self.id}]>"
-
-    def create(self):
-        """
-        Creates a YourResourceModel to the database
-        """
-        logger.info("Creating %s", self.name)
-        self.id = None  # pylint: disable=invalid-name
-        try:
-            db.session.add(self)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            logger.error("Error creating record: %s", self)
-            raise DataValidationError(e) from e
-
-    def update(self):
-        """
-        Updates a YourResourceModel to the database
-        """
-        logger.info("Saving %s", self.name)
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            logger.error("Error updating record: %s", self)
-            raise DataValidationError(e) from e
-
-    def delete(self):
-        """Removes a YourResourceModel from the data store"""
-        logger.info("Deleting %s", self.name)
-        try:
-            db.session.delete(self)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            logger.error("Error deleting record: %s", self)
-            raise DataValidationError(e) from e
-
-    def serialize(self):
-        """Serializes a YourResourceModel into a dictionary"""
-        return {"id": self.id, "name": self.name}
-
-    def deserialize(self, data):
-        """
-        Deserializes a YourResourceModel from a dictionary
-
-        Args:
-            data (dict): A dictionary containing the resource data
-        """
-        try:
-            self.name = data["name"]
-        except AttributeError as error:
-            raise DataValidationError("Invalid attribute: " + error.args[0]) from error
-        except KeyError as error:
-            raise DataValidationError(
-                "Invalid YourResourceModel: missing " + error.args[0]
-            ) from error
-        except TypeError as error:
-            raise DataValidationError(
-                "Invalid YourResourceModel: body of request contained bad or no data "
-                + str(error)
-            ) from error
-        return self
-
-    ##################################################
-    # CLASS METHODS
-    ##################################################
-
+    
+        
     @classmethod
     def all(cls):
-        """Returns all of the YourResourceModels in the database"""
+        """返回数据库中所有 Promotion 对象"""
         logger.info("Processing all YourResourceModels")
         return cls.query.all()
-
+    
     @classmethod
     def find(cls, by_id):
         """Finds a YourResourceModel by it's ID"""
@@ -200,10 +196,6 @@ class YourResourceModel(db.Model):
 
     @classmethod
     def find_by_name(cls, name):
-        """Returns all YourResourceModels with the given name
+        """Find Promotions by product_name."""
+        return cls.query.filter_by(product_name=name).all()
 
-        Args:
-            name (string): the name of the YourResourceModels you want to match
-        """
-        logger.info("Processing name query for %s ...", name)
-        return cls.query.filter(cls.name == name)
