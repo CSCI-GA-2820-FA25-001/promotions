@@ -11,17 +11,27 @@ services:
     container_name: nyu-project
     volumes:
       - ..:/app
+      - ./logs:/var/log
     command: sleep infinity
+    ports:
+      - "8080:8080" 
     environment:
       PORT: 8080
       FLASK_APP: wsgi:app
       FLASK_DEBUG: "True"
       GUNICORN_BIND: "0.0.0.0:8080"
-      DATABASE_URI: postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/postgres
+      DATABASE_URI: mysql+pymysql://appuser:appuserpass@mysql:3306/mydb
+      # ⬇️ add new MySQL connect parameters
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: mysecret
+      MYSQL_DATABASE: mydb
     networks:
       - dev
     depends_on:
       - postgres
+      - mysql   # ✅ new depend MySQL
 
   postgres:
     image: postgres:15-alpine
@@ -34,9 +44,23 @@ services:
       - postgres:/var/lib/postgresql/data
     networks:
       - dev
-
+    # ✅ new MySQL 3rd part service
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-service
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: mysecret
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: appuserpass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - dev
 volumes:
   postgres:
+  mysql_data:
 
 networks:
   dev:
