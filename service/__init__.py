@@ -22,6 +22,9 @@ import sys
 from flask import Flask
 from service import config
 from service.common import log_handlers
+from flask_migrate import Migrate
+from service.models import db
+
 
 
 ############################################################
@@ -33,11 +36,15 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(config)
 
+    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://appuser:appuserpass@mysql:3306/mydb"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     # Initialize Plugins
     # pylint: disable=import-outside-toplevel
     from service.models import db
     db.init_app(app)
-
+    
+    # Mysql update
+    migrate = Migrate(app, db)
     with app.app_context():
         # Dependencies require we import the routes AFTER the Flask app is created
         # pylint: disable=wrong-import-position, wrong-import-order, unused-import
