@@ -16,3 +16,5 @@ flake8
 
 # Deployment (optional, for Heroku/Docker)
 gunicorn
+# Database driver
+pymysql
