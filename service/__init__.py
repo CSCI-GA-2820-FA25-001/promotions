@@ -43,12 +43,12 @@ def create_app():
         from service import routes, models  # noqa: F401
         from service.common import error_handlers, cli_commands  # noqa: F401
 
-        try:
-            db.create_all()
-        except Exception as error:  # pylint: disable=broad-except
-            app.logger.critical("%s: Cannot continue", error)
-            # gunicorn requires exit code 4 to stop spawning workers when they die
-            sys.exit(4)
+        # Auto-create all tables for local dev & pytest
+        db.create_all()
+
+        # Register JSON error handlers
+        if hasattr(error_handlers, "register_handlers"):
+            error_handlers.register_handlers(app)
 
         # Configure logging
         log_handlers.init_logging(app, "gunicorn.error")
@@ -58,7 +58,8 @@ def create_app():
         app.logger.info(70 * "*")
         app.logger.info("Service initialized!")
 
-    # Return outside of context for Flask CLI / pytest
     return app
 
+
+# Flask CLI instance
 app = create_app()
