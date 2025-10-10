@@ -9,7 +9,7 @@ import logging
 # ---------------------------------------------------------------------
 DATABASE_URI = os.getenv(
     "DATABASE_URI",
-    "mysql+pymysql://appuser:appuserpass@mysql:3306/mydb"  # ✅ 默认连接到 docker-compose 里的 mysql 服务
+    "mysql+pymysql://appuser:appuserpass@mysql:3306/mydb"
 )
 
 SQLALCHEMY_DATABASE_URI = DATABASE_URI
