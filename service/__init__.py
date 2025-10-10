@@ -25,7 +25,6 @@ from service import config
 from service.models import db
 from service.common import log_handlers
 
-
 ############################################################
 # Initialize the Flask instance
 ############################################################
@@ -36,33 +35,38 @@ def create_app():
 
     # Initialize SQLAlchemy & Migrations
     db.init_app(app)
-    migrate = Migrate(app, db)
+    Migrate(app, db)
 
-    # Import routes and CLI AFTER app is initialized
     with app.app_context():
         from service import routes, models  # noqa: F401
         from service.common import error_handlers, cli_commands  # noqa: F401
 
-        # Register JSON error handlers
-        if hasattr(error_handlers, "register_handlers"):
-            error_handlers.register_handlers(app)
-
-        # ✅ Auto-create all tables for local dev & pytest
-        db.create_all()
+        # Ensure database tables are created for local dev & pytest
+        try:
+            db.create_all()
+            app.logger.info("Database tables created successfully.")
+        except Exception as error:  # pylint: disable=broad-except
+            app.logger.warning(f"Database initialization skipped: {error}")
 
         # Configure logging
         log_handlers.init_logging(app, "gunicorn.error")
+
+        # Register error handlers if available
+        if hasattr(error_handlers, "register_handlers"):
+            error_handlers.register_handlers(app)
 
         app.logger.info(70 * "*")
         app.logger.info("  S E R V I C E   R U N N I N G  ".center(70, "*"))
         app.logger.info(70 * "*")
         app.logger.info("Service initialized!")
 
-    # ✅ Explicitly register CLI commands
+    # Register CLI commands safely
     try:
         from service.common import cli_commands
-        app.cli.add_command(cli_commands.db_create)
-        app.cli.add_command(cli_commands.db_drop)
+        if hasattr(cli_commands, "db_create"):
+            app.cli.add_command(cli_commands.db_create)
+        if hasattr(cli_commands, "db_drop"):
+            app.cli.add_command(cli_commands.db_drop)
     except Exception as e:
         app.logger.warning(f"CLI commands not registered: {e}")
 
