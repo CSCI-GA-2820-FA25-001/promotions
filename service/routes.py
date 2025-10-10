@@ -38,20 +38,13 @@ logger = logging.getLogger("flask.app")
 def index():
     """Root URL for the Promotions microservice"""
     logger.info("Root URL accessed.")
-    try:
-        response = {
-            "service": "Promotions Service",
-            "version": "1.0.0",
-            "description": "Handles creation and management of promotions and discounts.",
-            "list_url": url_for("list_promotions", _external=True),
-        }
-        return jsonify(response), status.HTTP_200_OK
-    except Exception as e:
-        logger.error(f"Error generating root response: {str(e)}")
-        abort(
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            description="Internal server error while generating root metadata.",
-        )
+    response = {
+        "service": "Promotions REST API Service",
+        "version": "1.0",
+        "description": "This service manages promotions for an eCommerce platform.",
+        "list_url": url_for("list_promotions", _external=True),
+    }
+    return jsonify(response), status.HTTP_200_OK
 
 
 ######################################################################
@@ -66,57 +59,29 @@ def index():
 ######################################################################
 @app.route("/promotions", methods=["GET"])
 def list_promotions():
-    """
-    List promotions based on user role.
-
-    GET /promotions?role=<customer|supplier|manager>
-
-    Roles:
-      - customer → active promotions only
-      - supplier → active + expired (excluding deleted)
-      - manager  → all promotions
-
-    Returns:
-        200 OK with JSON list of promotions
-        400 Bad Request for invalid role
-        500 Internal Server Error for unexpected failures
-    """
+    """List promotions filtered by role"""
     logger.info("Request for promotions list received.")
-    role = request.args.get("role", "customer").strip().lower()
+    role = request.args.get("role", None)
     logger.debug(f"Role parameter received: {role}")
 
     try:
-        # ---- Role-based filtering ----
-        if role == "customer":
+        if role is None:
+            promotions = Promotion.query.all()
+        elif role == "customer":
             promotions = Promotion.query.filter_by(status=StatusEnum.active).all()
-
         elif role == "supplier":
             promotions = Promotion.query.filter(
                 Promotion.status.in_([StatusEnum.active, StatusEnum.expired])
             ).all()
-
         elif role == "manager":
             promotions = Promotion.query.all()
-
         else:
             logger.warning(f"Invalid role parameter: {role}")
-            abort(
-                status.HTTP_400_BAD_REQUEST,
-                description="Invalid role parameter. Must be one of: customer, supplier, manager.",
-            )
+            abort(status.HTTP_400_BAD_REQUEST, description="Invalid role value")
 
-        # ---- Serialize and respond ----
         results = [promo.serialize() for promo in promotions]
-        logger.info(f"Returning {len(results)} promotions for role '{role}'.")
         return jsonify(results), status.HTTP_200_OK
-
-    except DataValidationError as e:
-        logger.error(f"Data validation error while listing promotions: {str(e)}")
-        abort(status.HTTP_400_BAD_REQUEST, description=str(e))
 
     except Exception as e:
         logger.exception(f"Unhandled error in list_promotions: {str(e)}")
-        abort(
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            description="Internal server error while retrieving promotions.",
-        )
+        abort(status.HTTP_500_INTERNAL_SERVER_ERROR)
