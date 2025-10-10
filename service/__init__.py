@@ -43,12 +43,12 @@ def create_app():
         from service import routes, models  # noqa: F401
         from service.common import error_handlers, cli_commands  # noqa: F401
 
-        # Auto-create all tables for local dev & pytest
-        db.create_all()
-
         # Register JSON error handlers
         if hasattr(error_handlers, "register_handlers"):
             error_handlers.register_handlers(app)
+
+        # ✅ Auto-create all tables for local dev & pytest
+        db.create_all()
 
         # Configure logging
         log_handlers.init_logging(app, "gunicorn.error")
@@ -57,6 +57,14 @@ def create_app():
         app.logger.info("  S E R V I C E   R U N N I N G  ".center(70, "*"))
         app.logger.info(70 * "*")
         app.logger.info("Service initialized!")
+
+    # ✅ Explicitly register CLI commands
+    try:
+        from service.common import cli_commands
+        app.cli.add_command(cli_commands.db_create)
+        app.cli.add_command(cli_commands.db_drop)
+    except Exception as e:
+        app.logger.warning(f"CLI commands not registered: {e}")
 
     return app
 
