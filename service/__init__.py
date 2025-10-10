@@ -20,11 +20,10 @@ and SQL database
 """
 import sys
 from flask import Flask
-from service import config
-from service.common import log_handlers
 from flask_migrate import Migrate
+from service import config
 from service.models import db
-
+from service.common import log_handlers
 
 
 ############################################################
@@ -32,24 +31,17 @@ from service.models import db
 ############################################################
 def create_app():
     """Initialize the core application."""
-    # Create Flask application
     app = Flask(__name__)
     app.config.from_object(config)
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://appuser:appuserpass@mysql:3306/mydb"
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    # Initialize Plugins
-    # pylint: disable=import-outside-toplevel
-    from service.models import db
+    # Initialize SQLAlchemy & Migrations
     db.init_app(app)
-    
-    # Mysql update
     migrate = Migrate(app, db)
+
+    # Import routes and CLI AFTER app is initialized
     with app.app_context():
-        # Dependencies require we import the routes AFTER the Flask app is created
-        # pylint: disable=wrong-import-position, wrong-import-order, unused-import
-        from service import routes, models  # noqa: F401 E402
-        from service.common import error_handlers, cli_commands  # noqa: F401, E402
+        from service import routes, models  # noqa: F401
+        from service.common import error_handlers, cli_commands  # noqa: F401
 
         try:
             db.create_all()
@@ -58,12 +50,20 @@ def create_app():
             # gunicorn requires exit code 4 to stop spawning workers when they die
             sys.exit(4)
 
-        # Set up logging for production
+        # Configure logging
         log_handlers.init_logging(app, "gunicorn.error")
 
         app.logger.info(70 * "*")
         app.logger.info("  S E R V I C E   R U N N I N G  ".center(70, "*"))
         app.logger.info(70 * "*")
+        app.logger.info("Service initialized!")
+
+    # Return outside of context for Flask CLI / pytest
+    return app
+
+
+# Application instance for Flask CLI
+app = create_app()
 
         app.logger.info("Service initialized!")
 
