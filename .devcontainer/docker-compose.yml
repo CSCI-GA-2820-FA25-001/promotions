@@ -44,7 +44,6 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: mysql-service
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: mysecret
