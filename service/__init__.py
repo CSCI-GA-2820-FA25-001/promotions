@@ -61,10 +61,4 @@ def create_app():
     # Return outside of context for Flask CLI / pytest
     return app
 
-
-# Application instance for Flask CLI
 app = create_app()
-
-        app.logger.info("Service initialized!")
-
-        return app
