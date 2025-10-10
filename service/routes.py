@@ -62,21 +62,22 @@ def index():
 @app.route("/promotions", methods=["GET"])
 def list_promotions():
     """List promotions filtered by role"""
-    role = request.args.get("role", None)
-    logger.debug(f"Role parameter received: {role}")
+    role = request.args.get("role", "customer")  # default: customer view
 
-    if role is None:
-        promotions = Promotion.query.all()
-    elif role == "customer":
+    logger.debug(f"Role parameter: {role}")
+
+    if role == "customer":
+        # Return only active promotions
         promotions = Promotion.query.filter_by(status=StatusEnum.active).all()
     elif role == "supplier":
+        # Return active + expired promotions
         promotions = Promotion.query.filter(
             Promotion.status.in_([StatusEnum.active, StatusEnum.expired])
         ).all()
     elif role == "manager":
+        # Return all promotions
         promotions = Promotion.query.all()
     else:
-        # ✅ return JSON instead of abort, to match test expectations
         return jsonify({"message": "Invalid role value"}), status.HTTP_400_BAD_REQUEST
 
     results = [promo.serialize() for promo in promotions]
