@@ -71,14 +71,16 @@ class TestYourResourceService(TestCase):
     ######################################################################
     # Todo: Add your test cases here...
     def test_index(self):
-        """It should call the home page and return service info"""
+        """It should return service metadata with correct fields"""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         body = resp.get_json()
-        self.assertIn("name", body)
+        self.assertIn("service", body)
         self.assertIn("version", body)
-        self.assertIn("endpoints", body)
-        self.assertIn("list_promotions", body["endpoints"]) 
+        self.assertIn("description", body)
+        self.assertIn("list_url", body)
+        self.assertTrue(body["list_url"].startswith("http"))
+
     ######################################################################
     # 8 #  T E S T   L I S T   P R O M O T I O N S
     ######################################################################
@@ -134,3 +136,5 @@ class TestYourResourceService(TestCase):
         """It should return 400 for invalid role value"""
         resp = self.client.get("/promotions?role=whoami")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        body = resp.get_json()
+        self.assertTrue("Invalid role" in body.get("message", "") or "Invalid role" in body.get("description", ""))
