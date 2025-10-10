@@ -42,9 +42,11 @@ def index():
         "service": "Promotions REST API Service",
         "version": "1.0",
         "description": "This service manages promotions for an eCommerce platform.",
-        "list_url": url_for("list_promotions", _external=True),
+        # ✅ use host_url instead of _external for test consistency
+        "list_url": request.host_url.rstrip("/") + url_for("list_promotions"),
     }
     return jsonify(response), status.HTTP_200_OK
+
 
 
 ######################################################################
@@ -60,28 +62,22 @@ def index():
 @app.route("/promotions", methods=["GET"])
 def list_promotions():
     """List promotions filtered by role"""
-    logger.info("Request for promotions list received.")
     role = request.args.get("role", None)
     logger.debug(f"Role parameter received: {role}")
 
-    try:
-        if role is None:
-            promotions = Promotion.query.all()
-        elif role == "customer":
-            promotions = Promotion.query.filter_by(status=StatusEnum.active).all()
-        elif role == "supplier":
-            promotions = Promotion.query.filter(
-                Promotion.status.in_([StatusEnum.active, StatusEnum.expired])
-            ).all()
-        elif role == "manager":
-            promotions = Promotion.query.all()
-        else:
-            logger.warning(f"Invalid role parameter: {role}")
-            abort(status.HTTP_400_BAD_REQUEST, description="Invalid role value")
+    if role is None:
+        promotions = Promotion.query.all()
+    elif role == "customer":
+        promotions = Promotion.query.filter_by(status=StatusEnum.active).all()
+    elif role == "supplier":
+        promotions = Promotion.query.filter(
+            Promotion.status.in_([StatusEnum.active, StatusEnum.expired])
+        ).all()
+    elif role == "manager":
+        promotions = Promotion.query.all()
+    else:
+        # ✅ return JSON instead of abort, to match test expectations
+        return jsonify({"message": "Invalid role value"}), status.HTTP_400_BAD_REQUEST
 
-        results = [promo.serialize() for promo in promotions]
-        return jsonify(results), status.HTTP_200_OK
-
-    except Exception as e:
-        logger.exception(f"Unhandled error in list_promotions: {str(e)}")
-        abort(status.HTTP_500_INTERNAL_SERVER_ERROR)
+    results = [promo.serialize() for promo in promotions]
+    return jsonify(results), status.HTTP_200_OK
