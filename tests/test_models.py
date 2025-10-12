@@ -130,7 +130,7 @@ class TestPromotionModel(TestCase):
         self.assertEqual(promo.product_name, "Apple Watch")
         self.assertEqual(promo.discount_type, DiscountTypeEnum.amount)
 
-    def test_discounted_price_amount(self):
+    def test_discounted_price_with_amount_discount(self):
         """It should correctly compute discounted price when using amount"""
         promo = PromotionFactory(
             discount_type=DiscountTypeEnum.amount, discount_value=20
@@ -138,7 +138,7 @@ class TestPromotionModel(TestCase):
         expected = promo.original_price - 20
         self.assertEqual(promo.discounted_price, expected)
 
-    def test_discounted_price_percent(self):
+    def test_discounted_price_with_percent_discount(self):
         """It should correctly compute discounted price when using percent"""
         promo = PromotionFactory(
             discount_type=DiscountTypeEnum.percent, discount_value=10
@@ -146,7 +146,7 @@ class TestPromotionModel(TestCase):
         expected = Decimal(promo.original_price) * Decimal(0.9)
         self.assertAlmostEqual(promo.discounted_price, expected, places=2)
 
-    def test_find_by_status(self):
+    def test_find_promotions_by_status(self):
         """It should find promotions by status"""
         promo1 = PromotionFactory(status=StatusEnum.active)
         promo2 = PromotionFactory(status=StatusEnum.draft)
@@ -207,7 +207,7 @@ class TestPromotionModel(TestCase):
         promo = PromotionFactory(promotion_type="other")
         assert promo.discounted_price == promo.original_price
 
-    def test_discounted_price_amount(self):
+    def test_calculate_discounted_price_amount_type(self):
         """It should compute discounted price for amount type"""
         promo = PromotionFactory(
             promotion_type="discount",
@@ -217,7 +217,7 @@ class TestPromotionModel(TestCase):
         )
         assert promo.discounted_price == Decimal("90.00")
 
-    def test_discounted_price_percent(self):
+    def test_calculate_discounted_price_percent_type(self):
         """It should compute discounted price for percent type"""
         promo = PromotionFactory(
             promotion_type="discount",
@@ -322,7 +322,7 @@ class TestPromotionModel(TestCase):
         promo = PromotionFactory(promotion_type=PromotionTypeEnum.other)
         assert promo.discounted_price == promo.original_price
 
-    def test_discounted_price_amount(self):
+    def test_discounted_price_calculation_accuracy(self):
         """It should calculate correct price for amount discount"""
         promo = PromotionFactory(
             discount_type=DiscountTypeEnum.amount,
@@ -348,7 +348,7 @@ class TestPromotionModel(TestCase):
         assert len(results) == 1
         assert results[0].product_name == "FindMe"
 
-    def test_find_by_status(self):
+    def test_find_by_status_filter(self):
         """It should return promotions matching the given status"""
         promo_active = PromotionFactory(status=StatusEnum.active)
         promo_active.create()
