@@ -99,10 +99,7 @@ make lint
 
 
 ## model_testing
-```shell
-docker exec -it nyu-project bash #the container's name is nyu-project
-pytest tests/test_models.py
-```
+
 
 The tests cover:
 
