@@ -40,6 +40,7 @@ make build
 
 Start the containers:
 ```
+cd .devcontainer
 docker compose up -d
 docker exec -it nyu-project bash
 ```
@@ -65,17 +66,53 @@ Linting:
 ```bash
 make lint
 ```
-💡 Optional
 
-If you encounter environment issues running flask or make test,
-enter the container manually:
-
-```
-docker exec -it nyu-project bash
-```
 
 
 ---
+## Promotion Model Fields
+- `product_name` (str): Name of the product
+- `original_price` (Decimal): Original price of the product
+- `discount_value` (Decimal, optional): Discount amount or percent
+- `discount_type` (Enum, optional): 'amount' or 'percent'
+- `promotion_type` (Enum): 'discount' or 'other'
+- `start_date` (datetime, optional): Start of the promotion
+- `expiration_date` (datetime): End of the promotion
+- `status` (Enum): draft, active, expired, deactivated, deleted
+
+## Promotion Methods
+
+- `create()`: Adds the promotion to the database
+- `update()`: Updates the promotion
+- `delete()`: Deletes the promotion
+- `serialize()`: Returns a dictionary representation
+- `deserialize(data)`: Populates a Promotion from a dictionary
+- `discounted_price`: Computes the final price after discount
+- Class methods:
+  - `all()`: Returns all promotions
+  - `find(id)`: Find promotion by ID
+  - `find_by_name(name)`: Find promotions by product name
+  - `find_by_status(status)`: Find promotions by status
+  - `find_by_expiration_date(expiration_date)`: Find promotions by expiration_date
+  - `find_by_promotion_type(promotion_type)`: Find promotions by promotion_type
+  - `find_by_discount_type(discount_type)`: Find promotions by discount_type
+
+
+## model_testing
+```shell
+docker exec -it nyu-project bash #the container's name is nyu-project
+pytest tests/test_models.py
+```
+
+The tests cover:
+
+- Creating, updating, deleting promotions
+- Validating data types
+- Checking `discounted_price` calculation
+- Handling `discount` and `other` promotion types
+- Rollback behavior on database errors
+
+
 
 ## API Endpoints
 
