@@ -84,7 +84,7 @@ init:	## Creates the buildx instance
 .PHONY: build
 build:	## Build the project container image for local platform
 	$(info Building $(IMAGE)...)
-	docker build --rm --pull --tag $(IMAGE) .
+	docker build --rm --pull -f .devcontainer/Dockerfile --tag $(IMAGE) .
 
 .PHONY: push
 push:	## Push the image to the container registry
@@ -94,7 +94,7 @@ push:	## Push the image to the container registry
 .PHONY: buildx
 buildx:	## Build multi-platform image with buildx
 	$(info Building multi-platform image $(IMAGE) for $(PLATFORM)...)
-	docker buildx build --file Dockerfile --pull --platform=$(PLATFORM) --tag $(IMAGE) --push .
+	docker buildx build --file .devcontainer/Dockerfile --pull --platform=$(PLATFORM) --tag $(IMAGE) --push .
 
 .PHONY: remove
 remove:	## Stop and remove the buildx builder
