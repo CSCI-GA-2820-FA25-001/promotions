@@ -8,11 +8,9 @@ services:
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
-    command: bash -c "flask db migrate || true && flask db upgrade && flask run --host=0.0.0.0 --port=5000"
     volumes:
       - ..:/app
       - ./logs:/var/log
-    command: bash -c "sleep 10 && flask run --host=0.0.0.0 --port=5000"
     ports:
       - "8080:5000"         # ✅ host 8080 -> container 5000
     environment:
