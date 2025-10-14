@@ -82,10 +82,14 @@ def get_promotion(promotion_id):
     """Read a promotion"""
     promotion = Promotion.find(promotion_id)
     if not promotion:
-        return jsonify(error="Not Found",
-                       message=f"Promotion with id '{promotion_id}' was not found."), status.HTTP_404_NOT_FOUND
+        return (
+            jsonify(
+                error="Not Found",
+                message=f"Promotion with id '{promotion_id}' was not found.",
+            ),
+            status.HTTP_404_NOT_FOUND,
+        )
     return jsonify(promotion.serialize()), status.HTTP_200_OK
-
 
 ######################################################################
 # UPDATE
