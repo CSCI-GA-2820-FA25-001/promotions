@@ -98,13 +98,27 @@ class TestPromotionModel(TestCase):
         self.assertEqual(found.product_name, promo.product_name)
 
     def test_update_promotion(self):
-        """It should update an existing Promotion"""
+        """It should Update a Promotion"""
         promo = PromotionFactory()
+        logging.debug(promo)
+        promo.id = None
         promo.create()
-        promo.description = "Updated description"
+        logging.debug(promo)
+        self.assertIsNotNone(promo.id)
+        # Change it an save it
+        promo.category = "k9"
+        original_id = promo.id
         promo.update()
         updated = Promotion.find(promo.id)
         self.assertEqual(updated.description, "Updated description")
+        self.assertEqual(promo.id, original_id)
+        self.assertEqual(promo.category, "k9")
+        # Fetch it back and make sure the id hasn't changed
+        # but the data did change
+        promo = Promotion.all()
+        self.assertEqual(len(promo), 1)
+        self.assertEqual(promo[0].id, original_id)
+        self.assertEqual(promo[0].category, "k9")
 
     def test_serialize_promotion(self):
         """It should serialize a Promotion"""

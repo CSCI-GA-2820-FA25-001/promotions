@@ -33,6 +33,7 @@ DATABASE_URI = os.getenv(
     "DATABASE_URI", "mysql+pymysql://root:mysecret@mysql:3306/mydb"
 )
 
+BASE_URL = "/promotions"
 
 ######################################################################
 #  T E S T   C A S E S
@@ -84,6 +85,24 @@ class TestYourResourceService(TestCase):
         self.assertIn("list_url", body)
         self.assertTrue(body["list_url"].startswith("http"))
 
+    #######################################################################
+    # TEST UPDATE PROMOTIONS
+    #######################################################################
+    def test_update_pet(self):
+        """It should Update an existing Pet"""
+        # create a promotion to update
+        test_pet = PromotionFactory()
+        response = self.client.post(BASE_URL, json=test_pet.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # update the promotion
+        new_pet = response.get_json()
+        logging.debug(new_pet)
+        new_pet["category"] = "unknown"
+        response = self.client.put(f"{BASE_URL}/{new_pet['id']}", json=new_pet)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        updated_pet = response.get_json()
+        self.assertEqual(updated_pet["category"], "unknown")
     ######################################################################
     # 8 #  T E S T   L I S T   P R O M O T I O N S
     ######################################################################
