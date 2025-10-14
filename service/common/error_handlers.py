@@ -105,5 +105,3 @@ def register_handlers(app):
     # Handlers are already registered via @app.errorhandler decorators
     # This function exists to satisfy the call in __init__.py
     pass
-
-

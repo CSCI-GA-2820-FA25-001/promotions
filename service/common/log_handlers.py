@@ -22,6 +22,7 @@ consistently
 """
 import logging
 
+
 def init_app(app):
     """Basic logging for development and testing"""
     handler = logging.StreamHandler()
