@@ -24,22 +24,29 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from .factories import PromotionFactory
-from datetime import datetime, timedelta
-from service.models import db, Promotion, DiscountTypeEnum, PromotionTypeEnum, StatusEnum, DataValidationError
+from datetime import datetime
+from service.models import (
+    db,
+    Promotion,
+    DiscountTypeEnum,
+    PromotionTypeEnum,
+    StatusEnum,
+    DataValidationError,
+)
 from decimal import Decimal
 import pytest
 from unittest.mock import patch
 
 
 DATABASE_URI = os.getenv(
-    "DATABASE_URI",
-    "mysql+pymysql://root:root@localhost:3306/testdb" 
+    "DATABASE_URI", "mysql+pymysql://root:mysecret@mysql:3306/mydb"
 )
 
 ######################################################################
 #  YourResourceModel   M O D E L   T E S T   C A S E S
 ######################################################################
 # pylint: disable=too-many-public-methods
+
 
 class TestPromotionModel(TestCase):
     @classmethod
@@ -49,7 +56,8 @@ class TestPromotionModel(TestCase):
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
         app.logger.setLevel(logging.CRITICAL)
         app.app_context().push()
-        db.create_all() 
+        db.create_all()
+
     @classmethod
     def tearDownClass(cls):
         """This runs once after the test suite"""
@@ -64,7 +72,7 @@ class TestPromotionModel(TestCase):
     def tearDown(self):
         """Runs after each test"""
         db.session.remove()
-    
+
     ######################################################################
     #   T E S T   C A S E S
     ######################################################################
@@ -101,6 +109,8 @@ class TestPromotionModel(TestCase):
         promo.category = "k9"
         original_id = promo.id
         promo.update()
+        updated = Promotion.find(promo.id)
+        self.assertEqual(updated.description, "Updated description")
         self.assertEqual(promo.id, original_id)
         self.assertEqual(promo.category, "k9")
         # Fetch it back and make sure the id hasn't changed
@@ -127,26 +137,30 @@ class TestPromotionModel(TestCase):
             "discount_type": "amount",
             "promotion_type": "discount",
             "expiration_date": datetime.utcnow().isoformat(),
-            "status": "active"
+            "status": "active",
         }
         promo = Promotion()
         promo.deserialize(data)
         self.assertEqual(promo.product_name, "Apple Watch")
         self.assertEqual(promo.discount_type, DiscountTypeEnum.amount)
 
-    def test_discounted_price_amount(self):
+    def test_discounted_price_with_amount_discount(self):
         """It should correctly compute discounted price when using amount"""
-        promo = PromotionFactory(discount_type=DiscountTypeEnum.amount, discount_value=20)
+        promo = PromotionFactory(
+            discount_type=DiscountTypeEnum.amount, discount_value=20
+        )
         expected = promo.original_price - 20
         self.assertEqual(promo.discounted_price, expected)
 
-    def test_discounted_price_percent(self):
+    def test_discounted_price_with_percent_discount(self):
         """It should correctly compute discounted price when using percent"""
-        promo = PromotionFactory(discount_type=DiscountTypeEnum.percent, discount_value=10)
+        promo = PromotionFactory(
+            discount_type=DiscountTypeEnum.percent, discount_value=10
+        )
         expected = Decimal(promo.original_price) * Decimal(0.9)
         self.assertAlmostEqual(promo.discounted_price, expected, places=2)
 
-    def test_find_by_status(self):
+    def test_find_promotions_by_status(self):
         """It should find promotions by status"""
         promo1 = PromotionFactory(status=StatusEnum.active)
         promo2 = PromotionFactory(status=StatusEnum.draft)
@@ -167,10 +181,10 @@ class TestPromotionModel(TestCase):
         promo = PromotionFactory()
         promo.create()
         promo.delete()
-        
+
         found = Promotion.query.get(promo.id)
         self.assertIsNone(found)
-    
+
     def test_deserialize_valid_data(self):
         """It should deserialize valid data"""
         data = {
@@ -182,7 +196,7 @@ class TestPromotionModel(TestCase):
             "discount_value": 10,
             "start_date": "2024-01-01T00:00:00",
             "expiration_date": "2024-12-31T00:00:00",
-            "status": "active"
+            "status": "active",
         }
         promo = Promotion()
         promo.deserialize(data)
@@ -207,23 +221,23 @@ class TestPromotionModel(TestCase):
         promo = PromotionFactory(promotion_type="other")
         assert promo.discounted_price == promo.original_price
 
-    def test_discounted_price_amount(self):
+    def test_calculate_discounted_price_amount_type(self):
         """It should compute discounted price for amount type"""
         promo = PromotionFactory(
             promotion_type="discount",
             discount_type="amount",
             original_price=Decimal("100.00"),
-            discount_value=Decimal("10.00")
+            discount_value=Decimal("10.00"),
         )
         assert promo.discounted_price == Decimal("90.00")
 
-    def test_discounted_price_percent(self):
+    def test_calculate_discounted_price_percent_type(self):
         """It should compute discounted price for percent type"""
         promo = PromotionFactory(
             promotion_type="discount",
             discount_type="percent",
             original_price=Decimal("200.00"),
-            discount_value=Decimal("10.00")
+            discount_value=Decimal("10.00"),
         )
         assert promo.discounted_price == Decimal("180.00")
 
@@ -233,7 +247,7 @@ class TestPromotionModel(TestCase):
             promotion_type="discount",
             discount_type="amount",
             original_price=Decimal("5.00"),
-            discount_value=Decimal("10.00")
+            discount_value=Decimal("10.00"),
         )
         assert promo.discounted_price == Decimal("0.00")
 
@@ -249,7 +263,9 @@ class TestPromotionModel(TestCase):
         promo = PromotionFactory()
         promo.create()
         # 手动触发异常（mock db.session.commit）
-        with patch("service.models.db.session.commit", side_effect=Exception("DB fail")):
+        with patch(
+            "service.models.db.session.commit", side_effect=Exception("DB fail")
+        ):
             with self.assertRaises(DataValidationError):
                 promo.update()
 
@@ -257,7 +273,9 @@ class TestPromotionModel(TestCase):
         """It should rollback if delete() fails"""
         promo = PromotionFactory()
         promo.create()
-        with patch("service.models.db.session.commit", side_effect=Exception("DB fail")):
+        with patch(
+            "service.models.db.session.commit", side_effect=Exception("DB fail")
+        ):
             with self.assertRaises(DataValidationError):
                 promo.delete()
 
@@ -279,7 +297,7 @@ class TestPromotionModel(TestCase):
         """It should raise DataValidationError for wrong data types"""
         data = {
             "product_name": "wrong_test",
-            "original_price": 123, 
+            "original_price": 123,
             "discount_value": 12,
             "discount_type": DiscountTypeEnum.percent,
             "promotion_type": PromotionTypeEnum.other,
@@ -295,7 +313,7 @@ class TestPromotionModel(TestCase):
         data = {
             "original_price": 100.0,
             "promotion_type": "BOGO",
-            "expiration_date": "2025-12-31T00:00:00"
+            "expiration_date": "2025-12-31T00:00:00",
         }
         promotion = Promotion()
         with pytest.raises(DataValidationError):
@@ -307,23 +325,23 @@ class TestPromotionModel(TestCase):
             "product_name": 123,  # wrong type
             "original_price": 100.0,
             "promotion_type": "BOGO",
-            "expiration_date": "2025-12-31T00:00:00"
+            "expiration_date": "2025-12-31T00:00:00",
         }
         promotion = Promotion()
         with pytest.raises(DataValidationError):
             promotion.deserialize(data)
-            
+
     def test_discounted_price_non_discount_type(self):
         """It should return original price if promotion type is not discount"""
         promo = PromotionFactory(promotion_type=PromotionTypeEnum.other)
         assert promo.discounted_price == promo.original_price
 
-    def test_discounted_price_amount(self):
+    def test_discounted_price_calculation_accuracy(self):
         """It should calculate correct price for amount discount"""
         promo = PromotionFactory(
             discount_type=DiscountTypeEnum.amount,
             discount_value=Decimal("5.00"),
-            original_price=Decimal("20.00")
+            original_price=Decimal("20.00"),
         )
         assert promo.discounted_price == Decimal("15.00")
 
@@ -332,7 +350,7 @@ class TestPromotionModel(TestCase):
         promo = PromotionFactory(
             discount_type=DiscountTypeEnum.percent,
             discount_value=Decimal("150.00"),
-            original_price=Decimal("10.00")
+            original_price=Decimal("10.00"),
         )
         assert promo.discounted_price == Decimal("0.00")
 
@@ -343,8 +361,8 @@ class TestPromotionModel(TestCase):
         results = Promotion.find_by_name("FindMe")
         assert len(results) == 1
         assert results[0].product_name == "FindMe"
-    
-    def test_find_by_status(self):
+
+    def test_find_by_status_filter(self):
         """It should return promotions matching the given status"""
         promo_active = PromotionFactory(status=StatusEnum.active)
         promo_active.create()
@@ -355,7 +373,6 @@ class TestPromotionModel(TestCase):
         assert all(p.status == StatusEnum.active for p in results)
         assert promo_active in results
         assert promo_draft not in results
-
 
     def test_find_by_discount_type(self):
         """It should return promotions matching the given discount_type"""
@@ -369,11 +386,10 @@ class TestPromotionModel(TestCase):
         assert promo_amount in results
         assert promo_percent not in results
 
-
     def test_find_by_expiration_date(self):
         """It should return promotions matching the given expiration_date"""
         promo1 = PromotionFactory()
-        promo1.expiration_date = promo1.start_date  
+        promo1.expiration_date = promo1.start_date
         promo1.create()
         promo2 = PromotionFactory()
         promo2.create()
@@ -382,25 +398,29 @@ class TestPromotionModel(TestCase):
         assert promo1 in results
         assert promo2 not in results
 
-
     def test_find_by_promotion_type(self):
         """It should return promotions matching the given promotion_type"""
         promo_discount = PromotionFactory(promotion_type=PromotionTypeEnum.discount)
         promo_discount.create()
-        promo_other = PromotionFactory(promotion_type=PromotionTypeEnum.other,discount_type=None,discount_value=None)
+        promo_other = PromotionFactory(
+            promotion_type=PromotionTypeEnum.other,
+            discount_type=None,
+            discount_value=None,
+        )
         promo_other.create()
 
         results_discount = Promotion.find_by_promotion_type(PromotionTypeEnum.discount)
         results_other = Promotion.find_by_promotion_type(PromotionTypeEnum.other)
 
-        assert all(p.promotion_type == PromotionTypeEnum.discount for p in results_discount)
+        assert all(
+            p.promotion_type == PromotionTypeEnum.discount for p in results_discount
+        )
         assert promo_discount in results_discount
         assert promo_other not in results_discount
 
         assert all(p.promotion_type == PromotionTypeEnum.other for p in results_other)
         assert promo_other in results_other
         assert promo_discount not in results_other
-
 
     def test_find_and_all(self):
         """It should find promotions by id and return all promotions"""
