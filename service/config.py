@@ -9,12 +9,11 @@ import logging
 # ---------------------------------------------------------------------
 DATABASE_URI = os.getenv(
     "DATABASE_URI",
-    "mysql+pymysql://appuser:appuserpass@mysql:3306/mydb"
+    "postgresql+psycopg://postgres:postgres@postgres:5432/mydb"
 )
 
 SQLALCHEMY_DATABASE_URI = DATABASE_URI
 SQLALCHEMY_TRACK_MODIFICATIONS = False
-# SQLALCHEMY_POOL_SIZE = 2  # optional
 
 # ---------------------------------------------------------------------
 # Security & Logging

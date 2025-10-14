@@ -22,15 +22,22 @@ consistently
 """
 import logging
 
+def init_app(app):
+    """Basic logging for development and testing"""
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        "[%(asctime)s] %(levelname)s in %(module)s: %(message)s"
+    )
+    handler.setFormatter(formatter)
 
-def init_logging(app, logger_name: str):
-    """Set up logging for production"""
-    app.logger.propagate = False
-    gunicorn_logger = logging.getLogger(logger_name)
-    app.logger.handlers = gunicorn_logger.handlers
-    app.logger.setLevel(gunicorn_logger.level)
-    # Make all log formats consistent
-    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] [%(module)s] %(message)s", "%Y-%m-%d %H:%M:%S %z")
-    for handler in app.logger.handlers:
-        handler.setFormatter(formatter)
-    app.logger.info("Logging handler established")
+    if not app.logger.handlers:
+        app.logger.addHandler(handler)
+
+    app.logger.setLevel(logging.INFO)
+    app.logger.info("Logging initialized")
+
+
+def init_logging(app, channel=None):
+    """Alias for init_app() to support existing calls"""
+    init_app(app)

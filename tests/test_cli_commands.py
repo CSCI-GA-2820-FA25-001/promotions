@@ -26,7 +26,7 @@ from click.testing import CliRunner
 
 # pylint: disable=unused-import
 from wsgi import app  # noqa: F401
-from service.common.cli_commands import db_create  # noqa: E402
+from service.common.cli_commands import db_create, db_drop
 
 
 class TestFlaskCLI(TestCase):
@@ -42,3 +42,14 @@ class TestFlaskCLI(TestCase):
         with patch.dict(os.environ, {"FLASK_APP": "wsgi:app"}, clear=True):
             result = self.runner.invoke(db_create)
             self.assertEqual(result.exit_code, 0)
+            db_mock.drop_all.assert_called_once()
+            db_mock.create_all.assert_called_once()
+
+    @patch("service.common.cli_commands.db")
+    def test_db_drop(self, db_mock):
+        """It should call the db-drop command"""
+        db_mock.return_value = MagicMock()
+        with patch.dict(os.environ, {"FLASK_APP": "wsgi:app"}, clear=True):
+            result = self.runner.invoke(db_drop)
+            self.assertEqual(result.exit_code, 0)
+            db_mock.drop_all.assert_called_once()
