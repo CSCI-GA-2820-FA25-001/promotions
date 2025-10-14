@@ -55,7 +55,34 @@ def index():
 
 # Todo: Place your REST API code here ...
 
+######################################################################
+# UPDATE PROMOTION 
+######################################################################
+@app.route("/promotions/<int:promo_id>", methods=["PUT"])
+def update_pets(promo_id):
+    """
+    Update a Pet
 
+    This endpoint will update a Pet based the body that is posted
+    """
+    app.logger.info("Request to Update a promo with id [%s]", promo_id)
+    check_content_type("application/json")
+
+    # Attempt to find the Pet and abort if not found
+    promo = Promotion.find(promo_id)
+    if not promo:
+        abort(status.HTTP_404_NOT_FOUND, f"Promotion with id '{promo_id}' was not found.")
+
+    # Update the Pet with the new data
+    data = request.get_json()
+    app.logger.info("Processing: %s", data)
+    promo.deserialize(data)
+
+    # Save the updates to the database
+    promo.update()
+
+    app.logger.info("Pet with ID: %d updated.", promo.id)
+    return jsonify(promo.serialize()), status.HTTP_200_OK
 ######################################################################
 # LIST PROMOTIONS (#8)
 ######################################################################
