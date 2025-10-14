@@ -40,39 +40,18 @@ code .
 # → Reopen in Container
 ```
 
-Initialize the database:
-
-```bash
-flask db-create
+Start the containers:
+```
+docker compose up -d
 ```
 
-Run the service:
-
-```bash
-flask run -h 0.0.0.0 -p 5000
-```
-
-Service available at **[http://localhost:8080](http://localhost:8080)**
-
----
-
-### Manual
-
-If not using the container, install dependencies:
-
-```bash
-pip install -r requirements.txt
-flask db-create
-```
-
----
 
 ## Testing
 
 Run all tests with coverage:
 
-```bash
-pytest --maxfail=1 --disable-warnings --cov=service
+```
+make test
 ```
 
 Expected output:
@@ -87,6 +66,15 @@ Linting:
 ```bash
 make lint
 ```
+💡 Optional
+
+If you encounter environment issues running flask or make test,
+enter the container manually:
+
+```
+docker exec -it nyu-project bash
+```
+
 
 ---
 
