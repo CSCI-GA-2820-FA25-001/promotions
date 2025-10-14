@@ -178,6 +178,31 @@ class TestYourResourceService(TestCase):
         data = resp.get_json()
         self.assertIn("was not found", data["message"])
 
+    def test_get_promotion_includes_all_fields(self):
+        """It should return all fields in the response for a valid promotion"""
+        promo = self._create_promotions(1)[0]
+        resp = self.client.get(f"/promotions/{promo['id']}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        expected_fields = [
+            "id",
+            "product_name",
+            "description",
+            "original_price",
+            "discounted_price",
+            "discount_value",
+            "discount_type",
+            "promotion_type",
+            "start_date",
+            "expiration_date",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+
+        for field in expected_fields:
+            self.assertIn(field, data, f"Missing field: {field}")
+
     ######################################################################
     #  U P D A T E   T E S T S
     ######################################################################
