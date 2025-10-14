@@ -1,7 +1,4 @@
----
-# Python 3 with PostgreSQL and MySQL
-version: "3"
-
+# Python 3 with PostgreSQL
 services:
   app:
     build:
@@ -12,52 +9,35 @@ services:
     volumes:
       - ..:/app
       - ./logs:/var/log
-    # command: sleep infinity
     command: bash -c "sleep 10 && flask run --host=0.0.0.0 --port=5000"
     ports:
-      - "8080:5000"         # ✅ host 8080 -> container 5000
+      - "8080:5000"
     environment:
-      PORT: 5000            # ✅ Flask runs inside on port 5000
+      PORT: 5000
       FLASK_APP: wsgi:app
       FLASK_DEBUG: "True"
-      GUNICORN_BIND: "0.0.0.0:5000"   # ✅ match internal port
-      DATABASE_URI: mysql+pymysql://appuser:appuserpass@mysql:3306/mydb
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: appuserpass
-      MYSQL_DATABASE: mydb
+      GUNICORN_BIND: "0.0.0.0:5000"
+      DATABASE_URI: postgresql+psycopg://postgres:postgres@postgres:5432/mydb
     networks:
       - dev
     depends_on:
       - postgres
-      - mysql   # ✅ MySQL dependency
 
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_PASSWORD: pgs3cr3t
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
     volumes:
       - postgres:/var/lib/postgresql/data
     networks:
       - dev
 
-  mysql:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: mysecret
-      MYSQL_DATABASE: mydb
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: appuserpass
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - dev
-
 volumes:
   postgres:
-  mysql_data:
 
 networks:
   dev:
