@@ -22,7 +22,7 @@ and Delete YourResourceModel
 """
 
 import logging
-from flask import jsonify, request, url_for, abort
+from flask import jsonify, request, url_for
 from flask import current_app as app
 from service.models import Promotion, StatusEnum, DataValidationError
 from service.common import status
@@ -42,7 +42,7 @@ def index():
     response = {
         "service": "Promotions REST API Service",
         "version": "1.0",
-        "description": "This service allows CRUD operations on promotions", 
+        "description": "This service allows CRUD operations on promotions",
         "list_url": url_for("list_promotions", _external=True),
     }
     return jsonify(response), status.HTTP_200_OK
@@ -51,11 +51,12 @@ def index():
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
-# Todo: Place your REST API code here ...
 
 ######################################################################
 # CREATE
 ######################################################################
+
+
 @app.route("/promotions", methods=["POST"])
 def create_promotion():
     """Create a new promotion"""
@@ -114,8 +115,19 @@ def update_promotion(promotion_id):
 def delete_promotion(promotion_id):
     """Delete a promotion"""
     promotion = Promotion.find(promotion_id)
-    if promotion:
-        promotion.delete()
+    if not promotion:
+        # Idempotent delete — return 204 even if not found
+        return "", status.HTTP_204_NO_CONTENT
+
+    # Check for active promotions before deleting
+    if promotion.status == StatusEnum.active:
+        return (
+            jsonify(error="Conflict", message="Cannot delete active promotion"),
+            status.HTTP_409_CONFLICT,
+        )
+
+    # Proceed with deletion
+    promotion.delete()
     return "", status.HTTP_204_NO_CONTENT
 
 
@@ -161,6 +173,8 @@ def list_promotions():
 ######################################################################
 # METHOD NOT ALLOWED
 ######################################################################
+
+
 @app.errorhandler(405)
 def method_not_allowed(error):
     """Handle method not allowed"""

@@ -24,7 +24,7 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from .factories import PromotionFactory
-from datetime import datetime, timedelta
+from datetime import datetime
 from service.models import db, Promotion, DiscountTypeEnum, PromotionTypeEnum, StatusEnum, DataValidationError
 from decimal import Decimal
 import pytest
@@ -333,7 +333,7 @@ class TestPromotionModel(TestCase):
         with patch("service.models.db.session.commit", side_effect=Exception("DB fail")):
             with self.assertRaises(DataValidationError):
                 promo.delete()
-    
+
     ######################################################################
     #  E D G E   C A S E S   F O R   F U L L   C O V E R A G E
     ######################################################################
@@ -348,7 +348,6 @@ class TestPromotionModel(TestCase):
         )
         self.assertEqual(promo.discounted_price, promo.original_price)
 
-
     def test_deserialize_key_error(self):
         """It should raise DataValidationError for missing key error"""
         bad_data = {"wrong_key": "value"}
@@ -356,13 +355,11 @@ class TestPromotionModel(TestCase):
         with self.assertRaises(DataValidationError):
             promo.deserialize(bad_data)
 
-
     def test_deserialize_type_error(self):
         """It should raise DataValidationError for invalid input type"""
         promo = Promotion()
         with self.assertRaises(DataValidationError):
             promo.deserialize("not_a_dict")  # triggers TypeError branch
-
 
     def test_find_by_expiration_date(self):
         """It should find promotions by expiration_date"""

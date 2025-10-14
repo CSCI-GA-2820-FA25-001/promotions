@@ -231,9 +231,32 @@ class TestYourResourceService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_delete_promotion_not_found(self):
-        """It should return 204 even if Promotion doesn't exist (idempotent)"""
+        """It should delete even if Promotion doesn't exist (idempotent)"""
         resp = self.client.delete("/promotions/0")
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_delete_active_promotion(self):
+        """It should not delete an active Promotion 409 Conflict"""
+        # Create a promotion
+        promo = self._create_promotions(1)[0]
+
+        # Update its status to 'active'
+        resp = self.client.put(
+            f"/promotions/{promo['id']}",
+            json={**promo, "status": "active"},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        # Try deleting it
+        resp = self.client.delete(f"/promotions/{promo['id']}")
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+        data = resp.get_json()
+        self.assertEqual(data["error"], "Conflict")
+        self.assertIn("Cannot delete active promotion", data["message"])
+
+        # Verify it still exists
+        resp = self.client.get(f"/promotions/{promo['id']}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     ######################################################################
     #  L I S T   T E S T S

@@ -4,7 +4,7 @@ Test Factory to make fake objects for testing
 
 import factory
 from datetime import datetime, timedelta
-from service.models import Promotion, DiscountTypeEnum, PromotionTypeEnum, StatusEnum,db
+from service.models import Promotion, DiscountTypeEnum, PromotionTypeEnum, StatusEnum
 
 
 class PromotionFactory(factory.Factory):
@@ -23,5 +23,3 @@ class PromotionFactory(factory.Factory):
     start_date = factory.LazyFunction(datetime.now)
     expiration_date = factory.LazyFunction(lambda: datetime.now() + timedelta(days=30))
     status = StatusEnum.draft
-
-    # Todo: Add your other attributes here...
