@@ -101,15 +101,285 @@ make lint
 | GET    | `/promotions`      | List promotions (role-based) | 200 OK         | 400 / 404             |
 | GET    | `/`                | Service metadata             | 200 OK         | 500                   |
 
-#### Example Root Response
+---
 
+## Authentication & Authorization
+
+### Authentication Method
+Uses `X-Role` header for role-based access control.
+
+**Header Format:**
+```http
+X-Role: administrator
+```
+
+**Available Roles:**
+- `administrator` - Full access (create, update, delete)
+- `customer` - Read-only access to active promotions
+- `supplier` - Read-only access to active and expired promotions
+- `manager` - Read-only access to all promotions
+
+### Authorization Rules
+
+| Endpoint | Method | Required Role |
+|----------|--------|---------------|
+| `POST /promotions` | Create | Administrator |
+| `PUT /promotions/<id>` | Update | Administrator |
+| `DELETE /promotions/<id>` | Delete | Administrator |
+| `GET /promotions` | List/Search | Any (filtered by role) |
+| `GET /promotions/<id>` | Read | Any |
+
+---
+
+## Detailed API Documentation
+
+### Root URL - `GET /`
+
+Returns service metadata and available endpoints.
+
+**Response (200 OK):**
 ```json
 {
-  "name": "Promotions Service",
-  "version": "1.0.0",
-  "description": "Manage promotional offers for the eCommerce platform",
-  "list_url": "/promotions"
+  "service": "Promotions REST API Service",
+  "version": "1.0",
+  "description": "This service manages promotions for an eCommerce platform.",
+  "list_url": "http://localhost:8080/promotions"
 }
+```
+
+---
+
+### Create Promotion - `POST /promotions`
+
+Create a new promotion (admin only).
+
+**Required Headers:**
+```http
+Content-Type: application/json
+X-Role: administrator
+```
+
+**Request Body:**
+```json
+{
+  "product_name": "Black Friday Sale",
+  "description": "Huge discount event",
+  "original_price": 100.00,
+  "discount_value": 20.0,
+  "discount_type": "percent",
+  "promotion_type": "discount",
+  "start_date": "2025-10-14T00:00:00",
+  "expiration_date": "2025-11-14T23:59:59"
+}
+```
+
+**Required Fields:**
+- `product_name` - Unique name
+- `original_price` - Must be > 0
+- `promotion_type` - `"discount"` or `"other"`
+- `expiration_date` - Must be after `start_date`
+
+**Success Response (201 Created):**
+```json
+{
+  "id": 1,
+  "product_name": "Black Friday Sale",
+  "description": "Huge discount event",
+  "original_price": 100.0,
+  "discount_value": 20.0,
+  "discount_type": "percent",
+  "promotion_type": "discount",
+  "discounted_price": 80.0,
+  "start_date": "2025-10-14T00:00:00",
+  "expiration_date": "2025-11-14T23:59:59",
+  "status": "draft",
+  "created_at": "2025-10-14T10:30:00.123456",
+  "updated_at": "2025-10-14T10:30:00.123456"
+}
+```
+
+**Validation Rules:**
+- `original_price > 0`
+- `discount_value <= original_price` (for amount type)
+- `0 <= discount_value <= 100` (for percent type)
+- `expiration_date > start_date`
+- If `promotion_type = "other"` → discount fields must be null
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8080/promotions \
+  -H "Content-Type: application/json" \
+  -H "X-Role: administrator" \
+  -d '{
+    "product_name": "Holiday Special",
+    "original_price": 200.00,
+    "discount_value": 50.00,
+    "discount_type": "amount",
+    "promotion_type": "discount",
+    "expiration_date": "2025-12-25T23:59:59"
+  }'
+```
+
+---
+
+### List Promotions - `GET /promotions`
+
+List promotions filtered by user role.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `role` | string | `customer` | Filter by user role |
+
+**Role-Based Filtering:**
+- **customer**: Only `active` promotions
+- **supplier**: `active` + `expired` promotions
+- **manager**: All promotions
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "product_name": "Black Friday Sale",
+    "status": "active",
+    "discounted_price": 80.0,
+    "original_price": 100.0,
+    "discount_value": 20.0,
+    "discount_type": "percent",
+    ...
+  }
+]
+```
+
+**cURL Examples:**
+```bash
+# Customer view (active only)
+curl http://localhost:8080/promotions?role=customer
+
+# Supplier view (active + expired)
+curl http://localhost:8080/promotions?role=supplier
+
+# Manager view (all)
+curl http://localhost:8080/promotions?role=manager
+```
+
+---
+
+### Search Promotions - `GET /promotions`
+
+Search promotions using query parameters.
+
+**Query Parameters:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `product_name` | string | Substring match | `?product_name=phone` |
+| `status` | string | Filter by status | `?status=active` |
+| `promotion_type` | string | Filter by type | `?promotion_type=discount` |
+| `discount_type` | string | Filter by discount | `?discount_type=percent` |
+| `expiration_date` | date | Expiring on/before | `?expiration_date=2025-12-31` |
+
+**Note:** Multiple filters can be combined.
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "id": 2,
+    "product_name": "Smartphone Pro",
+    "discount_value": 10.0,
+    "discount_type": "percent",
+    "status": "active",
+    ...
+  }
+]
+```
+
+**cURL Examples:**
+```bash
+# Active promotions only
+curl http://localhost:8080/promotions?status=active
+
+# Discount promotions containing "phone"
+curl "http://localhost:8080/promotions?product_name=phone&promotion_type=discount"
+
+# Percent-based discounts
+curl http://localhost:8080/promotions?discount_type=percent
+```
+
+---
+
+### Update Promotion - `PUT /promotions/<id>`
+
+Update an existing promotion (partial or full update).
+
+**Headers:**
+```http
+Content-Type: application/json
+X-Role: administrator
+```
+
+**Request Body (all fields optional):**
+```json
+{
+  "discount_value": 15.0,
+  "discount_type": "percent",
+  "status": "active"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "id": 3,
+  "product_name": "Wireless Headphones",
+  "original_price": 200.0,
+  "discount_value": 15.0,
+  "discount_type": "percent",
+  "discounted_price": 170.0,
+  "promotion_type": "discount",
+  "status": "active",
+  "updated_at": "2025-10-14T11:45:00.789012",
+  ...
+}
+```
+
+**cURL Example:**
+```bash
+curl -X PUT http://localhost:8080/promotions/3 \
+  -H "Content-Type: application/json" \
+  -H "X-Role: administrator" \
+  -d '{
+    "discount_value": 15.0,
+    "status": "active"
+  }'
+```
+
+---
+
+## Discount Calculation
+
+The `discounted_price` is automatically calculated based on:
+
+- **Amount discount:** `original_price - discount_value` (minimum: 0)
+- **Percent discount:** `original_price * (1 - discount_value/100)` (minimum: 0)
+- **No discount:** Returns `original_price`
+
+**Examples:**
+```python
+# Amount discount
+original_price: 100.00, discount_value: 25.00, discount_type: "amount"
+→ discounted_price = 75.00
+
+# Percent discount
+original_price: 100.00, discount_value: 20.0, discount_type: "percent"
+→ discounted_price = 80.00
+
+# No discount (promotion_type: "other")
+original_price: 99.99
+→ discounted_price = 99.99
 ```
 
 ---
@@ -143,14 +413,68 @@ make lint
 
 ## Error Responses (JSON-Only)
 
-| Code | Meaning                                         |
-| :--- | :---------------------------------------------- |
-| 400  | Bad Request – invalid fields                    |
-| 403  | Forbidden – unauthorized action                 |
-| 404  | Not Found – invalid ID                          |
-| 409  | Conflict – duplicate name                       |
-| 422  | Unprocessable Entity – business logic violation |
-| 500  | Internal Server Error                           |
+All error responses follow a consistent JSON format:
+
+| Code | Meaning                                         | Example Scenario |
+| :--- | :---------------------------------------------- | :--------------- |
+| 400  | Bad Request – invalid fields                    | Missing required field, invalid JSON, bad enum |
+| 401  | Unauthorized – missing authentication           | No X-Role header |
+| 403  | Forbidden – unauthorized action                 | Non-admin trying to create |
+| 404  | Not Found – invalid ID                          | Promotion doesn't exist |
+| 405  | Method Not Allowed – wrong HTTP method          | PUT on root URL |
+| 409  | Conflict – duplicate name                       | product_name already exists |
+| 422  | Unprocessable Entity – business logic violation | discount > price, invalid dates |
+| 500  | Internal Server Error                           | Unexpected server errors |
+
+### Error Response Examples
+
+**401 Unauthorized:**
+```json
+{
+  "error": "Unauthorized",
+  "message": "Authentication required"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "error": "Forbidden",
+  "message": "Administrator privileges required to create promotions"
+}
+```
+
+**400 Bad Request:**
+```json
+{
+  "error": "Invalid request",
+  "message": "Missing required field: product_name"
+}
+```
+
+**422 Unprocessable Entity:**
+```json
+{
+  "error": "Unprocessable Entity",
+  "message": "discount_value cannot exceed original_price for amount-based discounts"
+}
+```
+
+**409 Conflict:**
+```json
+{
+  "error": "Conflict",
+  "message": "Promotion with name 'Black Friday Sale' already exists"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "error": "Not Found",
+  "message": "Promotion with id=123 not found"
+}
+```
 
 ---
 
