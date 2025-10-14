@@ -124,39 +124,45 @@ def delete_promotion(promotion_id):
 ######################################################################
 @app.route("/promotions", methods=["GET"])
 def list_promotions():
-    """List promotions filtered by role and optionally by date range"""
-    role = request.args.get("role", "customer").lower()
+    """List promotions filtered by role and optionally by date range and keyword"""
+    role = (request.headers.get("X-Role") or request.args.get("role", "customer")).lower()
     start_date_str = request.args.get("start_date")
-    end_date_str = request.args.get("end_date")
+    end_date_str   = request.args.get("end_date")
+    keyword        = request.args.get("q") or request.args.get("keyword")
 
-    # Step 1: Filter by role
+    # 1) Base query by role
     if role == "customer":
-        promotions = Promotion.query.filter_by(status=StatusEnum.active)
+        query = Promotion.query.filter(Promotion.status == StatusEnum.active)
     elif role == "supplier":
-        promotions = Promotion.query.filter(
-            Promotion.status.in_([StatusEnum.active, StatusEnum.expired])
-        )
+        query = Promotion.query.filter(Promotion.status.in_([StatusEnum.active, StatusEnum.expired]))
     elif role == "manager":
-        promotions = Promotion.query
+        query = Promotion.query
     else:
         return jsonify(error="Bad Request", message="Invalid role value"), status.HTTP_400_BAD_REQUEST
 
-    # Step 2: Optional date filtering
+    # 2) Keyword search (product_name or description)
+    if keyword:
+        like = f"%{keyword}%"
+        query = query.filter(
+            (Promotion.product_name.ilike(like)) | (Promotion.description.ilike(like))
+        )
+
+    # 3) Optional date range filter
     try:
         if start_date_str and end_date_str:
-            start_date = datetime.fromisoformat(start_date_str)
-            end_date = datetime.fromisoformat(end_date_str)
-            promotions = promotions.filter(
+            start_date = datetime.fromisoformat(start_date_str.replace("Z", "+00:00"))
+            end_date   = datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
+            query = query.filter(
                 Promotion.start_date >= start_date,
                 Promotion.expiration_date <= end_date
             )
     except ValueError:
-        # if date parsing fails
         return jsonify(error="Bad Request", message="Invalid date format"), status.HTTP_400_BAD_REQUEST
 
-    # Step 3: Return results
-    result = [p.serialize() for p in promotions.all()]
+    # 4) Return results
+    result = [p.serialize() for p in query.all()]
     return jsonify(result), status.HTTP_200_OK
+
 
 ######################################################################
 # METHOD NOT ALLOWED

@@ -337,6 +337,28 @@ class TestYourResourceService(TestCase):
         self.assertIn("error", data)
     
     ######################################################################
+    #  SEARCH TESTS
+    ######################################################################
+    def test_search_promotions_by_keyword(self):
+        """It should return only promotions matching the keyword (case-insensitive)"""
+        # Arrange: two active promos with different names/descriptions
+        p1 = PromotionFactory(product_name="Summer Sale", description="Beach gear", status=StatusEnum.active)
+        p2 = PromotionFactory(product_name="Winter Warmers", description="Cozy coats", status=StatusEnum.active)
+        p1.create()
+        p2.create()
+
+        # Act: search by keyword "summer"
+        # Use manager role to avoid any role-based filtering edge cases
+        resp = self.client.get("/promotions?q=summer&role=manager")
+
+        # Assert
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["product_name"], "Summer Sale")
+        
+    ######################################################################
     # EXTRA TESTS — error_handlers
     ######################################################################
     from flask import current_app as app
