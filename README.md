@@ -36,13 +36,12 @@ Clone the repository and open it in VS Code Remote Container:
 git clone https://github.com/CSCI-GA-2820-FA25-001/promotions.git
 cd promotions
 make build
-code .
-# → Reopen in Container
 ```
 
 Start the containers:
 ```
 docker compose up -d
+docker exec -it nyu-project bash
 ```
 
 
