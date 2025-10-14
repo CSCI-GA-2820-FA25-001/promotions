@@ -18,17 +18,21 @@ db = SQLAlchemy()
 
 class DataValidationError(Exception):
     """Used for an data validation errors when deserializing"""
+
     def __init__(self, message):
         """Create an instance with a meaningful error message"""
         super().__init__(message)
+
 
 class DiscountTypeEnum(str, Enum):
     amount = "amount"
     percent = "percent"
 
+
 class PromotionTypeEnum(str, Enum):
     discount = "discount"
     other = "other"
+
 
 class StatusEnum(str, Enum):
     draft = "draft"
@@ -36,6 +40,7 @@ class StatusEnum(str, Enum):
     expired = "expired"
     deactivated = "deactivated"
     deleted = "deleted"
+
 
 class Promotion(db.Model):
     __tablename__ = "promotions"
@@ -91,8 +96,6 @@ class Promotion(db.Model):
             db.session.rollback()
             logger.error("Error updating record: %s", self)
             raise DataValidationError(e) from e
-        
-    
 
     def serialize(self):
         """Serializes a Promotion into a JSON-friendly dictionary"""
@@ -111,6 +114,7 @@ class Promotion(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
     def deserialize(self, data):
         """
         Deserializes a Promotion from a dictionary
@@ -144,7 +148,7 @@ class Promotion(db.Model):
             self.start_date = datetime.fromisoformat(data["start_date"]) if data.get("start_date") else datetime.now()
             self.expiration_date = datetime.fromisoformat(data["expiration_date"])
             self.status = StatusEnum(data["status"]) if data.get("status") else StatusEnum.draft
-        
+
         except KeyError as error:
             raise DataValidationError(f"Missing required field: {error.args[0]}") from error
         except ValueError as error:
@@ -154,11 +158,11 @@ class Promotion(db.Model):
         return self
 
     __table_args__ = (
-        Index("ix_promotions_status", "status"), 
-        Index("ix_promotions_expiration_date", "expiration_date"), 
+        Index("ix_promotions_status", "status"),
+        Index("ix_promotions_expiration_date", "expiration_date"),
         Index("ix_promotions_name", "product_name"),
-        Index("ix_promotions_type", "promotion_type"), 
-        Index("ix_promotions_discount_type", "discount_type"), 
+        Index("ix_promotions_type", "promotion_type"),
+        Index("ix_promotions_discount_type", "discount_type"),
         CheckConstraint("original_price > 0", name="chk_original_price_positive"),
         CheckConstraint(
             "(discount_type IS NULL AND discount_value IS NULL) OR "
@@ -177,16 +181,12 @@ class Promotion(db.Model):
         ),
     )
 
-    
-
-    
-        
     @classmethod
     def all(cls):
         """return all the Promotion fields"""
         logger.info("Processing all YourResourceModels")
         return cls.query.all()
-    
+
     @classmethod
     def find(cls, by_id):
         """Finds a YourResourceModel by it's ID"""
@@ -197,12 +197,12 @@ class Promotion(db.Model):
     def find_by_name(cls, name):
         """Find Promotions by product_name."""
         return cls.query.filter_by(product_name=name).all()
-    
+
     @classmethod
     def find_by_status(cls, status):
         """Find Promotions by product_name."""
         return cls.query.filter_by(status=status).all()
-    
+
     @classmethod
     def find_by_discount_type(cls, discount_type):
         """Find Promotions by product_name."""
@@ -217,4 +217,3 @@ class Promotion(db.Model):
     def find_by_promotion_type(cls, promotion_type):
         """Find Promotions by product_name."""
         return cls.query.filter_by(promotion_type=promotion_type).all()
-
