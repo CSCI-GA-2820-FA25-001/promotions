@@ -14,6 +14,6 @@ RUN sudo pip install flask_migrate pymysql
 # Add pytest
 RUN pip install pytest
 
-COPY .devcontainer/scripts/entrypoint.sh /entrypoint.sh
-RUN sudo chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# COPY .devcontainer/scripts/entrypoint.sh /entrypoint.sh
+# RUN sudo chmod +x /entrypoint.sh
+# ENTRYPOINT ["/entrypoint.sh"]
