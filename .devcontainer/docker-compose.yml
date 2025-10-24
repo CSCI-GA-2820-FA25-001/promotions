@@ -28,17 +28,7 @@ services:
     networks:
       - dev
     depends_on:
-      - postgres
       - mysql   # ✅ MySQL dependency
-
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_PASSWORD: pgs3cr3t
-    volumes:
-      - postgres:/var/lib/postgresql/data
-    networks:
-      - dev
 
   mysql:
     image: mysql:8.0
@@ -54,7 +44,6 @@ services:
       - dev
 
 volumes:
-  postgres:
   mysql_data:
 
 networks:
