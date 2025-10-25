@@ -24,7 +24,7 @@ and Delete YourResourceModel
 import logging
 from flask import jsonify, request, url_for
 from flask import current_app as app
-from service.models import Promotion, StatusEnum, DataValidationError
+from service.models import Promotion, StatusEnum, DataValidationError, DiscountTypeEnum, PromotionTypeEnum
 from service.common import status
 from datetime import datetime
 
@@ -178,6 +178,88 @@ def list_promotions():
     # 4) Return results
     result = [p.serialize() for p in query.all()]
     return jsonify(result), status.HTTP_200_OK
+
+
+######################################################################
+# DUPLICATE
+######################################################################
+
+@app.route("/promotions/<int:promotion_id>/duplicate", methods=["POST"])
+def duplicate_promotion(promotion_id):
+    """Duplicate an existing promotion"""
+    # Check authentication
+    role = request.headers.get("X-Role")
+    if not role:
+        return jsonify(error="Unauthorized", message="Authentication required"), status.HTTP_401_UNAUTHORIZED
+    
+    # Check authorization (only administrators can duplicate)
+    if role.lower() != "administrator":
+        return jsonify(error="Forbidden", message="Administrator privileges required to duplicate promotions"), status.HTTP_403_FORBIDDEN
+    
+    # Check content type
+    if not request.is_json:
+        return jsonify(error="Unsupported Media Type", message="Content-Type must be application/json"), status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+    
+    # Find the original promotion
+    original_promotion = Promotion.find(promotion_id)
+    if not original_promotion:
+        return jsonify(error="Not Found", message=f"Promotion with ID {promotion_id} not found"), status.HTTP_404_NOT_FOUND
+    
+    try:
+        # Get override data from request
+        override_data = request.get_json() or {}
+        
+        # Create new promotion data by copying from original and applying overrides
+        # Handle product_name - if not overridden, make it unique by appending timestamp
+        product_name_override = override_data.get("product_name")
+        if product_name_override:
+            new_product_name = product_name_override
+        else:
+            # Make the product name unique by appending timestamp
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            new_product_name = f"{original_promotion.product_name}_copy_{timestamp}"
+        
+        new_promotion_data = {
+            "product_name": new_product_name,
+            "description": override_data.get("description", original_promotion.description),
+            "original_price": override_data.get("original_price", float(original_promotion.original_price)),
+            "discount_value": override_data.get("discount_value", float(original_promotion.discount_value) if original_promotion.discount_value else None),
+            "discount_type": override_data.get("discount_type", original_promotion.discount_type.value if original_promotion.discount_type else None),
+            "promotion_type": override_data.get("promotion_type", original_promotion.promotion_type.value),
+            "expiration_date": override_data.get("expiration_date", original_promotion.expiration_date.isoformat())
+        }
+        
+        # Only add start_date if it exists in original or override
+        start_date_override = override_data.get("start_date")
+        if start_date_override:
+            new_promotion_data["start_date"] = start_date_override
+        elif original_promotion.start_date:
+            new_promotion_data["start_date"] = original_promotion.start_date.isoformat()
+        
+        # Create the new promotion using deserialize
+        logger.info("Creating promotion with data: %s", new_promotion_data)
+        new_promotion = Promotion()
+        new_promotion.deserialize(new_promotion_data)
+        new_promotion.create()
+        
+        # Return the created promotion
+        location_url = url_for("get_promotion", promotion_id=new_promotion.id, _external=True)
+        return jsonify(new_promotion.serialize()), status.HTTP_201_CREATED, {"Location": location_url}
+        
+    except DataValidationError as err:
+        logger.error("DataValidationError in duplicate_promotion: %s", str(err))
+        # Check if it's a duplicate name conflict wrapped in DataValidationError
+        if "duplicate" in str(err).lower() or "unique" in str(err).lower() or "1062" in str(err):
+            return jsonify(error="Conflict", message=f"Promotion name '{override_data.get('product_name', '')}' already exists"), status.HTTP_409_CONFLICT
+        return jsonify(error="Unprocessable Entity", message=str(err)), status.HTTP_422_UNPROCESSABLE_ENTITY
+    except Exception as err:
+        logger.error("Exception in duplicate_promotion: %s", str(err))
+        # Handle duplicate name conflicts
+        if "duplicate" in str(err).lower() or "unique" in str(err).lower():
+            return jsonify(error="Conflict", message=f"Promotion name '{override_data.get('product_name', '')}' already exists"), status.HTTP_409_CONFLICT
+        # Handle other validation errors
+        return jsonify(error="Bad Request", message=str(err)), status.HTTP_400_BAD_REQUEST
 
 
 ######################################################################
