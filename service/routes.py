@@ -45,6 +45,8 @@ def index():
         "description": "This service allows CRUD operations on promotions",
         "list_url": url_for("list_promotions", _external=True),
     }
+
+    
     return jsonify(response), status.HTTP_200_OK
 
 ######################################################################
@@ -145,7 +147,16 @@ def list_promotions():
     start_date_str = request.args.get("start_date")
     end_date_str   = request.args.get("end_date")
     keyword        = request.args.get("q") or request.args.get("keyword")
-
+    
+    #the system will automatically check the status of promotion
+    expired = Promotion.query.filter(
+        Promotion.expiration_date < datetime.now(),
+        Promotion.status == StatusEnum.active
+    ).all()
+    for pro in expired:
+        pro.status = StatusEnum.expired
+        pro.update()
+        
     # 1) Base query by role
     if role == "customer":
         query = Promotion.query.filter(Promotion.status == StatusEnum.active)

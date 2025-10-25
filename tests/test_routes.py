@@ -528,7 +528,43 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/promotions?role=manager")
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.get_json(), list)
+
+    ######################################################################
+    # EXPIRATION TESTS
+    ######################################################################
+    def test_expiration(self):    
+        """It should automatically expire the promtion"""
+        promo = PromotionFactory(
+            product_name = "test_expiration",
+            start_date=datetime.now() - timedelta(days=14),
+            expiration_date = datetime.now() - timedelta(days=7),
+            status=StatusEnum.active,
+        )
+        promo.create()
+        # request promotions
+        resp = self.client.get("/promotions?role=manager")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        # query the database to make sure its status is changed to expired
+        test = Promotion.find(promo.id)
+        self.assertEqual(test.status,StatusEnum.expired)
     
+    def test_active_promotion_not_expired(self):
+        """It should keep promotion active if not expired"""
+        promo = PromotionFactory(
+            product_name="active_promo",
+            start_date=datetime.now() - timedelta(days=3),
+            expiration_date=datetime.now() + timedelta(days=3),
+            status=StatusEnum.active
+        )
+        promo.create()
+        # request promotions
+        resp = self.client.get("/promotions?role=manager")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        # query the database to make sure its status is still active
+        test = Promotion.find(promo.id)
+        self.assertEqual(test.status, StatusEnum.active)
+
+
 
 
 
