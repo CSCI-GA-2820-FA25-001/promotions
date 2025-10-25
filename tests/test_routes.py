@@ -27,6 +27,7 @@ from wsgi import app
 from .factories import PromotionFactory
 from service.models import Promotion, StatusEnum, db
 import pytest
+from datetime import datetime, timedelta
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI",
