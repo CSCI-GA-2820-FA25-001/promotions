@@ -9,11 +9,4 @@ RUN sudo python -m pip install --upgrade pip pipenv && \
 # Install user mode tools
 COPY .devcontainer/scripts/install-tools.sh /tmp/
 RUN cd /tmp && bash ./install-tools.sh
-# Add missing dependencies for MySQL + migrations
-RUN sudo pip install flask_migrate pymysql
-# Add pytest
-RUN pip install pytest
 
-# COPY .devcontainer/scripts/entrypoint.sh /entrypoint.sh
-# RUN sudo chmod +x /entrypoint.sh
-# ENTRYPOINT ["/entrypoint.sh"]
