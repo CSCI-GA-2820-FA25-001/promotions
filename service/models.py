@@ -6,10 +6,10 @@ All of the models are stored in this module
 
 import logging
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import CheckConstraint, Index, Enum as SQLEnum, func
-from decimal import Decimal
 logger = logging.getLogger("flask.app")
 
 # Create the SQLAlchemy object to be initialized later in init_db()
@@ -25,16 +25,19 @@ class DataValidationError(Exception):
 
 
 class DiscountTypeEnum(str, Enum):
+    """Enumeration for discount types"""
     amount = "amount"
     percent = "percent"
 
 
 class PromotionTypeEnum(str, Enum):
+    """Enumeration for promotion types"""
     discount = "discount"
     other = "other"
 
 
 class StatusEnum(str, Enum):
+    """Enumeration for promotion statuses"""
     draft = "draft"
     active = "active"
     expired = "expired"
@@ -43,6 +46,7 @@ class StatusEnum(str, Enum):
 
 
 class Promotion(db.Model):
+    """Promotion model for managing promotional offers"""
     __tablename__ = "promotions"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -60,15 +64,17 @@ class Promotion(db.Model):
 
     @property
     def discounted_price(self):
+        """Calculate the discounted price based on discount type and value"""
         if self.promotion_type != PromotionTypeEnum.discount or not self.discount_value:
             return self.original_price
         if self.discount_type == DiscountTypeEnum.amount:
             return max(self.original_price - self.discount_value, 0)
-        elif self.discount_type == DiscountTypeEnum.percent:
+        if self.discount_type == DiscountTypeEnum.percent:
             return max(Decimal(self.original_price) * Decimal(1 - self.discount_value / 100), 0)
         return self.original_price
 
     def create(self):
+        """Create a new promotion in the database"""
         logger.info("Creating %s", self.product_name)
         db.session.add(self)
         try:
@@ -79,6 +85,7 @@ class Promotion(db.Model):
             raise DataValidationError(e) from e
 
     def update(self):
+        """Update an existing promotion in the database"""
         logger.info("update %s", self.product_name)
         try:
             db.session.commit()
@@ -88,6 +95,7 @@ class Promotion(db.Model):
             raise DataValidationError(e) from e
 
     def delete(self):
+        """Delete a promotion from the database"""
         logger.info("delete %s", self.product_name)
         db.session.delete(self)
         try:
@@ -217,3 +225,145 @@ class Promotion(db.Model):
     def find_by_promotion_type(cls, promotion_type):
         """Find Promotions by product_name."""
         return cls.query.filter_by(promotion_type=promotion_type).all()
+
+    @classmethod
+    def duplicate_promotion(cls, original_id, override_data=None):
+        """Duplicate a promotion with optional overrides and proper error handling"""
+        from flask import request
+
+        # Find the original promotion
+        original_promotion = cls.find(original_id)
+        if not original_promotion:
+            raise DataValidationError(f"Promotion with ID {original_id} not found")
+
+        # Get override data from request if not provided
+        if override_data is None:
+            override_data = request.get_json() or {}
+        # Create new promotion data by copying from original and applying overrides
+        # Handle product_name - if not overridden, make it unique by appending timestamp
+        product_name_override = override_data.get("product_name")
+        if product_name_override:
+            new_product_name = product_name_override
+        else:
+            # Make the product name unique by appending timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            new_product_name = f"{original_promotion.product_name}_copy_{timestamp}"
+
+        new_promotion_data = {
+            "product_name": new_product_name,
+            "description": override_data.get("description", original_promotion.description),
+            "original_price": override_data.get("original_price", float(original_promotion.original_price)),
+            "discount_value": override_data.get(
+                "discount_value",
+                (float(original_promotion.discount_value) if original_promotion.discount_value else None),
+            ),
+            "discount_type": override_data.get(
+                "discount_type",
+                (original_promotion.discount_type.value if original_promotion.discount_type else None),
+            ),
+            "promotion_type": override_data.get("promotion_type", original_promotion.promotion_type.value),
+            "expiration_date": override_data.get("expiration_date", original_promotion.expiration_date.isoformat()),
+        }
+
+        # Only add start_date if it exists in original or override
+        start_date_override = override_data.get("start_date")
+        if start_date_override:
+            new_promotion_data["start_date"] = start_date_override
+        elif original_promotion.start_date:
+            new_promotion_data["start_date"] = original_promotion.start_date.isoformat()
+
+        # Create the new promotion using deserialize
+        logger.info("Creating promotion with data: %s", new_promotion_data)
+        new_promotion = cls()
+        new_promotion.deserialize(new_promotion_data)
+        new_promotion.create()
+
+        return new_promotion
+
+    @classmethod
+    def create_promotion_with_error_handling(cls, data):
+        """Create a promotion with comprehensive error handling and HTTP status classification"""
+        try:
+            promotion = cls()
+            promotion.deserialize(data)
+            promotion.create()
+            return promotion, None, None, None  # success, no error
+        except DataValidationError as err:
+            # Classify the error and return error info instead of raising
+            status_code, error_type = cls.classify_validation_error(err)
+            return None, status_code, error_type, str(err)
+
+    @classmethod
+    def update_promotion_with_error_handling(cls, promotion_id, data):
+        """Update a promotion with comprehensive error handling and HTTP status classification"""
+        try:
+            promotion = cls.find(promotion_id)
+            if not promotion:
+                return None, 404, "Not Found", f"Promotion with ID {promotion_id} not found"
+            
+            promotion.deserialize(data)
+            promotion.update()
+            return promotion, None, None, None  # success, no error
+        except DataValidationError as err:
+            # Classify the error and return error info instead of raising
+            status_code, error_type = cls.classify_validation_error(err)
+            return None, status_code, error_type, str(err)
+
+    @classmethod
+    def duplicate_promotion_with_error_handling(cls, original_id, override_data=None):
+        """Duplicate a promotion with comprehensive error handling and HTTP status classification"""
+        try:
+            promotion = cls.duplicate_promotion(original_id, override_data)
+            return promotion, None, None, None  # success, no error
+        except DataValidationError as err:
+            # Classify the error and return error info instead of raising
+            status_code, error_type = cls.classify_duplicate_error(err)
+            return None, status_code, error_type, str(err)
+
+    @staticmethod
+    def classify_validation_error(error):
+        """Classify DataValidationError from create/update operations into appropriate HTTP status codes"""
+        error_message = str(error).lower()
+
+        # Handle not found errors (404)
+        if "not found" in error_message:
+            return 404, "Not Found"
+
+        # Handle duplicate name conflicts (409)
+        if "duplicate" in error_message or "unique" in error_message or "1062" in error_message:
+            return 409, "Conflict"
+
+        # Handle business logic validation errors (422)
+        if any(keyword in error_message for keyword in [
+            "should be", "cannot", "discount_value should be", "discount_type should be",
+            "chk_discount_value_valid", "chk_original_price_positive",
+            "chk_expiration_after_start", "chk_promotion_type_after_start"
+        ]):
+            return 422, "Unprocessable Entity"
+
+        # Handle other validation errors (400)
+        return 400, "Bad Request"
+
+    @staticmethod
+    def classify_duplicate_error(error):
+        """Classify DataValidationError from duplicate operation into appropriate HTTP status codes"""
+        error_message = str(error).lower()
+
+        # Handle not found errors (404)
+        if "not found" in error_message:
+            return 404, "Not Found"
+
+        # Handle duplicate name conflicts (409)
+        if "duplicate" in error_message or "unique" in error_message or "1062" in error_message:
+            return 409, "Conflict"
+
+        # Handle business logic validation errors (422)
+        if any(keyword in error_message for keyword in [
+            "should be", "cannot", "discount_value should be", "discount_type should be",
+            "chk_discount_value_valid", "chk_original_price_positive",
+            "chk_expiration_after_start", "chk_promotion_type_after_start"
+        ]):
+            return 422, "Unprocessable Entity"
+
+        # Handle other validation errors (400)
+        return 400, "Bad Request"
