@@ -119,6 +119,7 @@ The tests cover:
 | GET    | `/promotions/<id>` | Retrieve a promotion by ID   | 200 OK         | 400 / 404             |
 | PUT    | `/promotions/<id>` | Update an existing promotion | 200 OK         | 400 / 404 / 422       |
 | DELETE | `/promotions/<id>` | Soft delete promotion        | 204 No Content | 400 / 403 / 404 / 409 |
+| POST   | `/promotions/<id>/duplicate` | Duplicate a promotion | 201 Created | 400 / 401 / 403 / 404 / 409 / 422 |
 | GET    | `/promotions`      | List promotions (role-based) | 200 OK         | 400 / 404             |
 | GET    | `/`                | Service metadata             | 200 OK         | 500                   |
 
@@ -147,6 +148,7 @@ X-Role: administrator
 | `POST /promotions` | Create | Administrator |
 | `PUT /promotions/<id>` | Update | Administrator |
 | `DELETE /promotions/<id>` | Delete | Administrator |
+| `POST /promotions/<id>/duplicate` | Duplicate | Administrator |
 | `GET /promotions` | List/Search | Any (filtered by role) |
 | `GET /promotions/<id>` | Read | Any |
 
@@ -377,6 +379,79 @@ curl -X PUT http://localhost:8080/promotions/3 \
     "status": "active"
   }'
 ```
+
+---
+
+### Duplicate Promotion - `POST /promotions/<id>/duplicate`
+
+Create a new promotion by copying an existing one (admin only).
+
+**Required Headers:**
+```http
+Content-Type: application/json
+X-Role: administrator
+```
+
+**Request Body (all fields optional overrides):**
+```json
+{
+  "product_name": "Duplicated Promotion",
+  "expiration_date": "2025-12-31T23:59:59",
+  "discount_value": 25.0
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "id": 456,
+  "product_name": "Duplicated Promotion",
+  "description": "Original description",
+  "original_price": 100.0,
+  "discount_value": 25.0,
+  "discount_type": "percent",
+  "promotion_type": "discount",
+  "discounted_price": 75.0,
+  "status": "draft",
+  "start_date": "2025-10-14T00:00:00",
+  "expiration_date": "2025-12-31T23:59:59",
+  "created_at": "2025-10-14T10:30:00.123456",
+  "updated_at": "2025-10-14T10:30:00.123456"
+}
+```
+
+**Key Features:**
+- Copies all fields from original promotion
+- Generates new system fields (id, created_at, updated_at)
+- Sets default status to `"draft"`
+- Allows field overrides via request body
+- Only administrators can duplicate promotions
+
+**cURL Examples:**
+```bash
+# Duplicate with no overrides
+curl -X POST http://localhost:8080/promotions/123/duplicate \
+  -H "Content-Type: application/json" \
+  -H "X-Role: administrator" \
+  -d '{}'
+
+# Duplicate with overrides
+curl -X POST http://localhost:8080/promotions/123/duplicate \
+  -H "Content-Type: application/json" \
+  -H "X-Role: administrator" \
+  -d '{
+    "product_name": "Black Friday 2025",
+    "expiration_date": "2025-12-31T23:59:59",
+    "discount_value": 30.0
+  }'
+```
+
+**Error Responses:**
+- **401 Unauthorized** - Missing X-Role header
+- **403 Forbidden** - Non-admin role (customer, supplier, manager)
+- **404 Not Found** - Original promotion doesn't exist
+- **409 Conflict** - Duplicate product_name (if overridden)
+- **422 Unprocessable Entity** - Validation errors in overrides
 
 ---
 

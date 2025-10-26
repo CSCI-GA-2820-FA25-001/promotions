@@ -9,4 +9,3 @@ RUN sudo python -m pip install --upgrade pip pipenv && \
 # Install user mode tools
 COPY .devcontainer/scripts/install-tools.sh /tmp/
 RUN cd /tmp && bash ./install-tools.sh
-

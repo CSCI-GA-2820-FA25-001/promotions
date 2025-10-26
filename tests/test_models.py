@@ -21,14 +21,14 @@ Test cases for Pet Model
 # pylint: disable=duplicate-code
 import os
 import logging
-from unittest import TestCase
-from wsgi import app
-from .factories import PromotionFactory
 from datetime import datetime
-from service.models import db, Promotion, DiscountTypeEnum, PromotionTypeEnum, StatusEnum, DataValidationError
 from decimal import Decimal
-import pytest
+from unittest import TestCase
 from unittest.mock import patch
+import pytest
+from wsgi import app
+from service.models import db, Promotion, DiscountTypeEnum, PromotionTypeEnum, StatusEnum, DataValidationError
+from .factories import PromotionFactory
 
 
 DATABASE_URI = os.getenv(

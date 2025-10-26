@@ -21,13 +21,12 @@ TestYourResourceModel API Service Test Suite
 # pylint: disable=duplicate-code
 import os
 import logging
-from service.common import status
+from datetime import datetime, timedelta
 from unittest import TestCase
+from service.common import status
+from service.models import Promotion, StatusEnum, db
 from wsgi import app
 from .factories import PromotionFactory
-from service.models import Promotion, StatusEnum, db
-import pytest
-from datetime import datetime, timedelta
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI",
@@ -306,7 +305,7 @@ class TestYourResourceService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         data = resp.get_json()
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["status"], "active")
+        self.assertEqual(data[0]["status"], StatusEnum.active)
 
     def test_list_promotions_supplier_active_and_expired(self):
         """Supplier should see active and expired, but NOT deleted"""
@@ -321,9 +320,9 @@ class TestYourResourceService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         data = resp.get_json()
         statuses = [p["status"] for p in data]
-        self.assertIn("active", statuses)
-        self.assertIn("expired", statuses)
-        self.assertNotIn("deleted", statuses)
+        self.assertIn(StatusEnum.active, statuses)
+        self.assertIn(StatusEnum.expired, statuses)
+        self.assertNotIn(StatusEnum.deleted, statuses)
 
     def test_list_promotions_manager_all(self):
         """Manager should see all promotions"""
@@ -343,7 +342,7 @@ class TestYourResourceService(TestCase):
         """It should return 400 for invalid role value"""
         resp = self.client.get("/promotions?role=whoami")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-    
+
     def test_list_promotions_date_filter(self):
         """It should list only promotions within valid date range"""
         PromotionFactory.create_batch(3)
@@ -354,7 +353,7 @@ class TestYourResourceService(TestCase):
         """It should return 415 when Content-Type is not JSON"""
         resp = self.client.post("/promotions", data="invalid", content_type="text/plain")
         self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
-    
+
     def test_list_promotions_invalid_date_format(self):
         """It should return 400 for invalid date format"""
         resp = self.client.get("/promotions?start_date=bad&end_date=also_bad")
@@ -384,7 +383,7 @@ class TestYourResourceService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         data = resp.get_json()
         self.assertIn("error", data)
-    
+
     ######################################################################
     #  SEARCH TESTS
     ######################################################################
@@ -406,7 +405,7 @@ class TestYourResourceService(TestCase):
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["product_name"], "Summer Sale")
-        
+
     ######################################################################
     # EXTRA TESTS — error_handlers
     ######################################################################
@@ -434,6 +433,7 @@ class TestYourResourceService(TestCase):
     ######################################################################
     # EXTRA COVERAGE BOOST
     ######################################################################
+
     def test_error_handlers_explicit_calls(self):
         """It should directly trigger each error handler"""
         from service.models import DataValidationError
@@ -470,7 +470,7 @@ class TestYourResourceService(TestCase):
             promo.update()
         except DataValidationError:
             pass
-    
+
     def test_data_validation_error_handler_direct(self):
         """It should trigger the DataValidationError handler directly"""
         from service.models import DataValidationError
@@ -499,7 +499,7 @@ class TestYourResourceService(TestCase):
         # Wrong type for discount percent
         with pytest.raises(DataValidationError):
             promo.deserialize({"product_name": "A", "discount_percent": "NaN"})
-    
+
     def test_service_init_and_register_handlers(self):
         """It should execute __init__ lines like register_handlers(app)"""
         import importlib
@@ -531,14 +531,243 @@ class TestYourResourceService(TestCase):
         self.assertIsInstance(resp.get_json(), list)
 
     ######################################################################
+    # DUPLICATE PROMOTION TESTS
+    ######################################################################
+
+    def test_duplicate_promotion_success_no_overrides(self):
+        """It should duplicate a promotion with no overrides"""
+        # Create an original promotion
+        original_promo = PromotionFactory()
+        original_promo.create()
+        original_id = original_promo.id
+
+        # Duplicate the promotion
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json={},
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        data = resp.get_json()
+        self.assertNotEqual(data["id"], original_id)  # New ID
+        # Product name should be unique (original name + timestamp)
+        self.assertNotEqual(data["product_name"], original_promo.product_name)
+        self.assertTrue(data["product_name"].startswith(original_promo.product_name))
+        self.assertIn("_copy_", data["product_name"])
+        self.assertEqual(data["description"], original_promo.description)
+        self.assertEqual(data["original_price"], float(original_promo.original_price))
+        self.assertEqual(data["discount_value"], float(original_promo.discount_value))
+        self.assertEqual(data["discount_type"], original_promo.discount_type)
+        self.assertEqual(data["promotion_type"], original_promo.promotion_type)
+        self.assertEqual(data["status"], "draft")  # Default status
+        self.assertIn("created_at", data)
+        self.assertIn("updated_at", data)
+
+    def test_duplicate_promotion_success_with_overrides(self):
+        """It should duplicate a promotion with field overrides"""
+        # Create an original promotion
+        original_promo = PromotionFactory()
+        original_promo.create()
+        original_id = original_promo.id
+
+        # Duplicate with overrides
+        override_data = {
+            "product_name": "Duplicated Promotion",
+            "expiration_date": "2025-12-31T23:59:59",
+            "discount_value": 30.0
+        }
+
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json=override_data,
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        data = resp.get_json()
+        self.assertNotEqual(data["id"], original_id)  # New ID
+        self.assertEqual(data["product_name"], "Duplicated Promotion")  # Overridden
+        self.assertEqual(data["expiration_date"], "2025-12-31T23:59:59")  # Overridden
+        self.assertEqual(data["discount_value"], 30.0)  # Overridden
+        self.assertEqual(data["description"], original_promo.description)  # Original
+        self.assertEqual(data["original_price"], float(original_promo.original_price))  # Original
+        self.assertEqual(data["status"], "draft")  # Default status
+
+    def test_duplicate_promotion_unauthorized_no_header(self):
+        """It should return 401 when no X-Role header is provided"""
+        # Create an original promotion
+        original_promo = PromotionFactory()
+        original_promo.create()
+        original_id = original_promo.id
+
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json={}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        data = resp.get_json()
+        self.assertEqual(data["error"], "Unauthorized")
+        self.assertIn("Authentication required", data["message"])
+
+    def test_duplicate_promotion_forbidden_non_admin(self):
+        """It should return 403 when non-admin tries to duplicate"""
+        # Create an original promotion
+        original_promo = PromotionFactory()
+        original_promo.create()
+        original_id = original_promo.id
+
+        # Try with customer role
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json={},
+            headers={"X-Role": "customer"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        data = resp.get_json()
+        self.assertEqual(data["error"], "Forbidden")
+        self.assertIn("Administrator privileges required", data["message"])
+
+        # Try with supplier role
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json={},
+            headers={"X-Role": "supplier"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Try with manager role
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json={},
+            headers={"X-Role": "manager"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_duplicate_promotion_not_found(self):
+        """It should return 404 when original promotion doesn't exist"""
+        resp = self.client.post(
+            "/promotions/99999/duplicate",
+            json={},
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+        data = resp.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn("Promotion with ID 99999 not found", data["message"])
+
+    def test_duplicate_promotion_conflict_duplicate_name(self):
+        """It should return 409 when override name already exists"""
+        # Create two promotions
+        promo1 = PromotionFactory()
+        promo1.create()
+
+        promo2 = PromotionFactory()
+        promo2.create()
+
+        # Try to duplicate promo1 with promo2's name
+        resp = self.client.post(
+            f"/promotions/{promo1.id}/duplicate",
+            json={"product_name": promo2.product_name},
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+
+        data = resp.get_json()
+        self.assertEqual(data["error"], "Conflict")
+        self.assertIn("already exists", data["message"])
+
+    def test_duplicate_promotion_bad_json(self):
+        """It should return 400 for malformed JSON"""
+        # Create an original promotion
+        original_promo = PromotionFactory()
+        original_promo.create()
+        original_id = original_promo.id
+
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            data="invalid json",
+            content_type="application/json",
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_duplicate_promotion_validation_errors(self):
+        """It should return 422 for validation errors in overrides"""
+        # Create an original promotion
+        original_promo = PromotionFactory()
+        original_promo.create()
+        original_id = original_promo.id
+
+        # Try with invalid discount value (greater than original price)
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json={"discount_value": 999.0, "discount_type": "amount"},
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        data = resp.get_json()
+        self.assertEqual(data["error"], "Unprocessable Entity")
+
+    def test_duplicate_promotion_system_fields_generated(self):
+        """It should generate new system fields for duplicated promotion"""
+        # Create an original promotion
+        original_promo = PromotionFactory()
+        original_promo.create()
+        original_id = original_promo.id
+
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json={},
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        data = resp.get_json()
+        new_id = data["id"]
+
+        # Verify the new promotion can be retrieved
+        get_resp = self.client.get(f"/promotions/{new_id}")
+        self.assertEqual(get_resp.status_code, status.HTTP_200_OK)
+
+        # Verify original promotion is unchanged
+        original_resp = self.client.get(f"/promotions/{original_id}")
+        self.assertEqual(original_resp.status_code, status.HTTP_200_OK)
+
+    def test_duplicate_promotion_discounted_price_calculated(self):
+        """It should calculate discounted_price for duplicated promotion"""
+        # Create an original promotion with discount
+        original_promo = PromotionFactory(
+            original_price=100.0,
+            discount_value=20.0,
+            discount_type="percent"
+        )
+        original_promo.create()
+        original_id = original_promo.id
+
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            json={},
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        data = resp.get_json()
+        self.assertEqual(data["discounted_price"], 80.0)  # 100 - 20%
+
+    ######################################################################
     # EXPIRATION TESTS
     ######################################################################
-    def test_expiration(self):    
+    def test_expiration(self):
         """It should automatically expire the promtion"""
         promo = PromotionFactory(
-            product_name = "test_expiration",
+            product_name="test_expiration",
             start_date=datetime.now() - timedelta(days=14),
-            expiration_date = datetime.now() - timedelta(days=7),
+            expiration_date=datetime.now() - timedelta(days=7),
             status=StatusEnum.active,
         )
         promo.create()
@@ -547,8 +776,8 @@ class TestYourResourceService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # query the database to make sure its status is changed to expired
         test = Promotion.find(promo.id)
-        self.assertEqual(test.status,StatusEnum.expired)
-    
+        self.assertEqual(test.status, StatusEnum.expired)
+
     def test_active_promotion_not_expired(self):
         """It should keep promotion active if not expired"""
         promo = PromotionFactory(
@@ -564,8 +793,3 @@ class TestYourResourceService(TestCase):
         # query the database to make sure its status is still active
         test = Promotion.find(promo.id)
         self.assertEqual(test.status, StatusEnum.active)
-
-
-
-
-

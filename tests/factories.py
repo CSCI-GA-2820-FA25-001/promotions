@@ -2,13 +2,13 @@
 Test Factory to make fake objects for testing
 """
 
-import factory
 from datetime import datetime, timedelta
+import factory
 from service.models import Promotion, DiscountTypeEnum, PromotionTypeEnum, StatusEnum
 
 
 class PromotionFactory(factory.Factory):
-    """Creates fake pets that you don't have to feed"""
+    """Factory for creating test Promotion objects"""
 
     class Meta:
         model = Promotion
