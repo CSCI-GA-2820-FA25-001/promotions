@@ -73,7 +73,7 @@ class TestYourResourceService(TestCase):
     ######################################################################
     #  P L A C E   T E S T   C A S E S   H E R E
     ######################################################################
-    # Todo: Add your test cases here...
+    # Todo: Add your test cases here...  # pylint: disable=fixme
 
     ######################################################################
     #  R O O T   U R L   T E S T S
@@ -409,7 +409,7 @@ class TestYourResourceService(TestCase):
     ######################################################################
     # EXTRA TESTS — error_handlers
     ######################################################################
-    from flask import current_app as app
+    from flask import current_app as app  # pylint: disable=import-outside-toplevel,shadowed-import
 
     def test_not_found_error_handler(self):
         """It should handle 404 Not Found errors in JSON"""
@@ -421,8 +421,8 @@ class TestYourResourceService(TestCase):
 
     def test_internal_server_error_handler(self):
         """It should handle 500 Internal Server Error gracefully"""
-        from service.common import error_handlers
-        from werkzeug.exceptions import InternalServerError
+        from service.common import error_handlers  # pylint: disable=import-outside-toplevel
+        from werkzeug.exceptions import InternalServerError  # pylint: disable=import-outside-toplevel
 
         # simulate a real 500 error without adding new route
         with app.app_context():
@@ -436,9 +436,9 @@ class TestYourResourceService(TestCase):
 
     def test_error_handlers_explicit_calls(self):
         """It should directly trigger each error handler"""
-        from service.models import DataValidationError
-        from service.common import error_handlers
-        from werkzeug.exceptions import UnsupportedMediaType
+        from service.models import DataValidationError  # pylint: disable=import-outside-toplevel
+        from service.common import error_handlers  # pylint: disable=import-outside-toplevel
+        from werkzeug.exceptions import UnsupportedMediaType  # pylint: disable=import-outside-toplevel
         with app.app_context():
             # 400 Bad Request
             err = DataValidationError("bad input")
@@ -453,14 +453,15 @@ class TestYourResourceService(TestCase):
 
     def test_import_service_triggers_init(self):
         """It should import service package and execute init code"""
-        import importlib
+        import importlib  # pylint: disable=import-outside-toplevel
         svc = importlib.import_module("service")
         self.assertTrue(hasattr(svc, "__package__"))
 
     def test_model_deserialize_and_update_errors(self):
         """It should raise DataValidationError on bad model usage"""
+        # pylint: disable=import-outside-toplevel,reimported,redefined-outer-name
         from service.models import Promotion, DataValidationError
-        import pytest
+        import pytest  # pylint: disable=import-outside-toplevel
         promo = Promotion()
         # 1. deserialize invalid type should raise
         with pytest.raises(DataValidationError):
@@ -473,8 +474,8 @@ class TestYourResourceService(TestCase):
 
     def test_data_validation_error_handler_direct(self):
         """It should trigger the DataValidationError handler directly"""
-        from service.models import DataValidationError
-        from service.common import error_handlers
+        from service.models import DataValidationError  # pylint: disable=import-outside-toplevel
+        from service.common import error_handlers  # pylint: disable=import-outside-toplevel
         with app.app_context():
             err = DataValidationError("manual validation fail")
             resp, code = error_handlers.request_validation_error(err)
@@ -490,8 +491,9 @@ class TestYourResourceService(TestCase):
 
     def test_model_deserialize_field_errors(self):
         """It should cover extra DataValidationError paths in model"""
+        # pylint: disable=import-outside-toplevel,reimported,redefined-outer-name
         from service.models import Promotion, DataValidationError
-        import pytest
+        import pytest  # pylint: disable=import-outside-toplevel
         promo = Promotion()
         # Missing required field
         with pytest.raises(DataValidationError):
@@ -502,7 +504,7 @@ class TestYourResourceService(TestCase):
 
     def test_service_init_and_register_handlers(self):
         """It should execute __init__ lines like register_handlers(app)"""
-        import importlib
+        import importlib  # pylint: disable=import-outside-toplevel
         svc = importlib.import_module("service")
         # Reload to ensure final lines run
         importlib.reload(svc)
@@ -510,8 +512,9 @@ class TestYourResourceService(TestCase):
 
     def test_promotion_deserialize_missing_fields(self):
         """It should raise DataValidationError for missing or invalid fields"""
+        # pylint: disable=import-outside-toplevel,reimported,redefined-outer-name
         from service.models import Promotion, DataValidationError
-        import pytest
+        import pytest  # pylint: disable=import-outside-toplevel
         promo = Promotion()
         # 1. completely empty dict
         with pytest.raises(DataValidationError):

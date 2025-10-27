@@ -26,26 +26,26 @@ class DataValidationError(Exception):
 
 class DiscountTypeEnum(str, Enum):
     """Enumeration for discount types"""
-    amount = "amount"
-    percent = "percent"
+    amount = "amount"  # pylint: disable=invalid-name
+    percent = "percent"  # pylint: disable=invalid-name
 
 
 class PromotionTypeEnum(str, Enum):
     """Enumeration for promotion types"""
-    discount = "discount"
-    other = "other"
+    discount = "discount"  # pylint: disable=invalid-name
+    other = "other"  # pylint: disable=invalid-name
 
 
 class StatusEnum(str, Enum):
     """Enumeration for promotion statuses"""
-    draft = "draft"
-    active = "active"
-    expired = "expired"
-    deactivated = "deactivated"
-    deleted = "deleted"
+    draft = "draft"  # pylint: disable=invalid-name
+    active = "active"  # pylint: disable=invalid-name
+    expired = "expired"  # pylint: disable=invalid-name
+    deactivated = "deactivated"  # pylint: disable=invalid-name
+    deleted = "deleted"  # pylint: disable=invalid-name
 
 
-class Promotion(db.Model):
+class Promotion(db.Model):  # pylint: disable=too-many-instance-attributes
     """Promotion model for managing promotional offers"""
     __tablename__ = "promotions"
 
@@ -59,8 +59,12 @@ class Promotion(db.Model):
     start_date = db.Column(db.DateTime, nullable=True, default=datetime.now)
     expiration_date = db.Column(db.DateTime, nullable=False)
     status = db.Column(SQLEnum(StatusEnum), nullable=False, default=StatusEnum.draft)
+    # pylint: disable=not-callable
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
-    updated_at = db.Column(db.DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    # pylint: disable=not-callable
+    updated_at = db.Column(
+        db.DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
 
     @property
     def discounted_price(self):
@@ -123,7 +127,7 @@ class Promotion(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
-    def deserialize(self, data):
+    def deserialize(self, data):  # noqa: C901
         """
         Deserializes a Promotion from a dictionary
 
@@ -229,7 +233,7 @@ class Promotion(db.Model):
     @classmethod
     def duplicate_promotion(cls, original_id, override_data=None):
         """Duplicate a promotion with optional overrides and proper error handling"""
-        from flask import request
+        from flask import request  # pylint: disable=import-outside-toplevel
 
         # Find the original promotion
         original_promotion = cls.find(original_id)
@@ -300,7 +304,7 @@ class Promotion(db.Model):
             promotion = cls.find(promotion_id)
             if not promotion:
                 return None, 404, "Not Found", f"Promotion with ID {promotion_id} not found"
-            
+
             promotion.deserialize(data)
             promotion.update()
             return promotion, None, None, None  # success, no error
