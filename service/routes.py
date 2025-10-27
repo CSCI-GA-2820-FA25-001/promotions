@@ -76,13 +76,13 @@ def create_promotion():
 
     # Use the model method to handle creation with error handling
     promotion, error_code, error_type, error_message = Promotion.create_promotion_with_error_handling(request.get_json())
-    
+
     if error_code:
         return (
             jsonify(error=error_type, message=error_message),
             error_code,
         )
-    
+
     location_url = url_for("get_promotion", promotion_id=promotion.id, _external=True)
     return (
         jsonify(promotion.serialize()),
@@ -129,14 +129,18 @@ def update_promotion(promotion_id):
         )
 
     # Use the model method to handle update with error handling
-    promotion, error_code, error_type, error_message = Promotion.update_promotion_with_error_handling(promotion_id, request.get_json())
-    
+    promotion, error_code, error_type, error_message = (
+        Promotion.update_promotion_with_error_handling(
+            promotion_id, request.get_json()
+        )
+    )
+
     if error_code:
         return (
             jsonify(error=error_type, message=error_message),
             error_code,
         )
-    
+
     return jsonify(promotion.serialize()), status.HTTP_200_OK
 
 

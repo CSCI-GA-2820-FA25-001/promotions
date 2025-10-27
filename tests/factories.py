@@ -7,10 +7,11 @@ import factory
 from service.models import Promotion, DiscountTypeEnum, PromotionTypeEnum, StatusEnum
 
 
+# pylint: disable=too-few-public-methods
 class PromotionFactory(factory.Factory):
     """Factory for creating test Promotion objects"""
 
-    class Meta:
+    class Meta:  # pylint: disable=missing-class-docstring
         model = Promotion
 
     id = factory.Sequence(lambda n: n + 1)
