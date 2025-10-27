@@ -31,20 +31,22 @@ from service.common import log_handlers
 ######################################################################
 def create_app():
     """Initialize the core Flask application."""
-    app = Flask(__name__)
+    app = Flask(__name__)  # pylint: disable=redefined-outer-name
     app.config.from_object(config)
 
     # ------------------------------------------------------------------
     # Initialize database
     # ------------------------------------------------------------------
-    from service.models import db
+    from service.models import db  # pylint: disable=import-outside-toplevel
     db.init_app(app)
 
     # ------------------------------------------------------------------
     # Register blueprints, routes, and CLI commands
     # ------------------------------------------------------------------
     with app.app_context():
-        from service import routes, models  # noqa: F401
+        # pylint: disable=redefined-outer-name,import-outside-toplevel
+        # pylint: disable=reimported,unused-import
+        from service import routes, models  # noqa: F401, F811
         from service.common import error_handlers, cli_commands  # noqa: F401
 
         try:
@@ -73,12 +75,12 @@ def create_app():
 # ----------------------------------------------------------------------
 app = create_app()
 
-from service import routes  # noqa: F401
+from service import routes  # noqa: F401 pylint: disable=wrong-import-position
 
 # ----------------------------------------------------------------------
 # Trigger logger and handler registration explicitly (for test coverage)
 # ----------------------------------------------------------------------
-from service.common import error_handlers
+from service.common import error_handlers  # pylint: disable=wrong-import-position
 
 
 def _init_logging_and_handlers():
