@@ -289,17 +289,3 @@ def duplicate_promotion(promotion_id):
         status.HTTP_201_CREATED,
         {"Location": location_url},
     )
-
-
-######################################################################
-# METHOD NOT ALLOWED
-######################################################################
-
-
-@app.errorhandler(405)
-def method_not_allowed(error):
-    """Handle method not allowed"""
-    return (
-        jsonify(error="Method Not Allowed", message=str(error)),
-        status.HTTP_405_METHOD_NOT_ALLOWED,
-    )
