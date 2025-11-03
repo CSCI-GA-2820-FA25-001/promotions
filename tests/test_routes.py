@@ -800,8 +800,6 @@ class TestYourResourceService(TestCase):
     ######################################################################
     # HEALTHENDPOINT TESTS
     ######################################################################
-
-    
     def test_health_endpoint(self):
         """Test the /health endpoint"""
         resp = self.client.get("/health")
