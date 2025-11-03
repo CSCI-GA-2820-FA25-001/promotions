@@ -298,4 +298,4 @@ def duplicate_promotion(promotion_id):
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint for Kubernetes"""
-    return jsonify({"status": "OK"}), 200
+    return jsonify({"status": "OK"}), status.HTTP_200_OK
