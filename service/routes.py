@@ -289,3 +289,13 @@ def duplicate_promotion(promotion_id):
         status.HTTP_201_CREATED,
         {"Location": location_url},
     )
+
+######################################################################
+# health end point
+######################################################################
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    """Health check endpoint for Kubernetes"""
+    return jsonify({"status": "OK"}), status.HTTP_200_OK
