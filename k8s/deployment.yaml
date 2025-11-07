@@ -18,6 +18,7 @@ spec:
       containers:
       - name: promotions
         image: cluster-registry:5000/promotions:1.0
+
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -32,7 +33,7 @@ spec:
         - name: GUNICORN_BIND
           value: "0.0.0.0:8080"
         - name: DATABASE_URI
-          value: "postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/postgres"
+          value: "postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/promotions"
         resources:
           limits:
             cpu: "0.5"
@@ -46,7 +47,7 @@ spec:
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 5
-          livenessProbe:
+        livenessProbe:
             httpGet:
               path: /health
               port: 8080
