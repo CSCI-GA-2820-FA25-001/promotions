@@ -48,6 +48,26 @@ Once running, the service will be available at **[http://localhost:8080](http://
 
 ---
 
+## 🚢 Container Image & Deployment Workflow
+
+- The `Makefile` reads the image reference (`registry/image:tag`) directly from `k8s/deployment.yaml`, so `make build`, `make push`, and `make deploy` all stay in sync with the Kubernetes manifests.
+- Default image: `cluster-registry:5000/promotions:1.0`. Override any part by exporting env vars, e.g. `make IMAGE_TAG=dev1 build push deploy`.
+- `make cluster` provisions a local k3d cluster and registry that match the configured registry host/port (defaults to `cluster-registry:5000`).
+- `make deploy` reapplies manifests and runs `kubectl set image deployment/promotions promotions=$IMAGE` to force the desired revision.
+- Confirm the rollout with `kubectl get pods`; inspect logs via `kubectl logs deployment/promotions`.
+
+Example end-to-end flow:
+
+```bash
+make cluster          # create k3d cluster + registry
+make IMAGE_TAG=dev1 build
+make IMAGE_TAG=dev1 push
+make IMAGE_TAG=dev1 deploy
+kubectl get pods
+```
+
+---
+
 ## 🧩 Continuous Integration and Coverage
 
 Every Pull Request triggers GitHub Actions to run `flake8`, `pylint`, and `pytest`.
