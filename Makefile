@@ -1,8 +1,24 @@
-# These can be overidden with env vars.
-REGISTRY ?= cluster-registry:5000
-IMAGE_NAME ?= promotions
-IMAGE_TAG ?= 1.0
-IMAGE ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
+# These can be overridden with env vars.
+K8S_DEPLOYMENT ?= k8s/deployment.yaml
+DEFAULT_DEPLOYMENT_IMAGE := $(strip $(shell python3 -c "from pathlib import Path; text = Path('$(K8S_DEPLOYMENT)').read_text().splitlines() if Path('$(K8S_DEPLOYMENT)').exists() else []; print(next((line.split(':',1)[1].strip() for line in text if line.strip().startswith('image:')), ''), end='')" 2>/dev/null))
+DEFAULT_REGISTRY := cluster-registry:5000
+DEFAULT_IMAGE_NAME := promotions
+DEFAULT_IMAGE_TAG := 1.0
+
+ifneq ($(DEFAULT_DEPLOYMENT_IMAGE),)
+DEFAULT_REGISTRY := $(firstword $(subst /, ,$(DEFAULT_DEPLOYMENT_IMAGE)))
+DEFAULT_REPOSITORY := $(word 2,$(subst /, ,$(DEFAULT_DEPLOYMENT_IMAGE)))
+DEFAULT_IMAGE_NAME := $(firstword $(subst :, ,$(DEFAULT_REPOSITORY)))
+DEFAULT_IMAGE_TAG := $(word 2,$(subst :, ,$(DEFAULT_REPOSITORY)))
+endif
+
+REGISTRY ?= $(DEFAULT_REGISTRY)
+IMAGE_NAME ?= $(DEFAULT_IMAGE_NAME)
+IMAGE_TAG ?= $(if $(DEFAULT_IMAGE_TAG),$(DEFAULT_IMAGE_TAG),1.0)
+IMAGE := $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
+REGISTRY_HOST := $(firstword $(subst :, ,$(REGISTRY)))
+REGISTRY_PORT_RAW := $(word 2,$(subst :, ,$(REGISTRY)))
+REGISTRY_PORT := $(if $(REGISTRY_PORT_RAW),$(REGISTRY_PORT_RAW),5000)
 PLATFORM ?= "linux/amd64,linux/arm64"
 CLUSTER ?= nyu-devops
 
@@ -56,17 +72,18 @@ secret: ## Generate a secret hex key
 .PHONY: cluster
 cluster: ## Create a K3D Kubernetes cluster with load balancer and registry
 	$(info Creating Kubernetes cluster $(CLUSTER) with a registry and 2 worker nodes...)
-	k3d cluster create $(CLUSTER) --agents 2 --registry-create cluster-registry:0.0.0.0:5000 --port '8080:80@loadbalancer'
+	k3d cluster create $(CLUSTER) --agents 2 --registry-create $(REGISTRY_HOST):0.0.0.0:$(REGISTRY_PORT) --port '8080:80@loadbalancer'
 
 .PHONY: cluster-rm
 cluster-rm: ## Remove a K3D Kubernetes cluster
 	$(info Removing Kubernetes cluster...)
-	k3d cluster delete nyu-devops
+	k3d cluster delete $(CLUSTER)
 
 .PHONY: deploy
 deploy: ## Deploy the service on local Kubernetes
-	$(info Deploying service locally...)
+	$(info Deploying service locally with image $(IMAGE)...)
 	kubectl apply -R -f k8s/
+	kubectl set image deployment/promotions promotions=$(IMAGE)
 
 ############################################################
 # COMMANDS FOR BUILDING THE IMAGE
