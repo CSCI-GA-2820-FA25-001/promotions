@@ -53,7 +53,7 @@ def create_app():
         try:
             db.create_all()
         except Exception as error:  # pylint: disable=broad-except
-            app.logger.warning("%s: Database not ready yet", error)
+            app.logger.warning("%s: Database not ready yet", error)  # pragma: no cover
 
         cli_commands.init_cli(app)
 
