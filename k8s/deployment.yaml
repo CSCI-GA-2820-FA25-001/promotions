@@ -19,7 +19,7 @@ spec:
       - name: promotions
         image: cluster-registry:5000/promotions:1.0
 
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           protocol: TCP
@@ -45,13 +45,11 @@ spec:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 5
+            initialDelaySeconds: 5
+            periodSeconds: 5
         livenessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 20
-            periodSeconds: 15
-            failureThreshold: 5
+            initialDelaySeconds: 10
+            periodSeconds: 10

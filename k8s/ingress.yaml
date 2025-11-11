@@ -4,11 +4,9 @@ metadata:
   name: promotions-ingress
   labels:
     app: promotions
-  annotations:
-    kubernetes.io/ingress.class: traefik
 spec:
   rules:
-  - host: promotions.localdev.me
+  - host: cluster-registry
     http:
       paths:
       - path: /

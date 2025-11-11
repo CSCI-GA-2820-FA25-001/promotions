@@ -85,17 +85,6 @@ deploy: ## Deploy the service on local Kubernetes
 	kubectl apply -R -f k8s/
 	kubectl set image deployment/promotions promotions=$(IMAGE)
 
-.PHONY: verify
-verify: ## Verify the deployment and test the health endpoint
-	$(info Verifying deployment...)
-	kubectl get ingress
-	@echo "\n=== Checking Pods ==="
-	kubectl get pods
-	@echo "\n=== Testing Health Endpoint ==="
-	@echo "Testing: curl -H 'Host: promotions.localdev.me' http://localhost:8080/health"
-	@curl -s -H "Host: promotions.localdev.me" http://localhost:8080/health | python3 -m json.tool || echo "Health check failed"
-	@echo "\n=== Verification Complete ==="
-
 ############################################################
 # COMMANDS FOR BUILDING THE IMAGE
 ############################################################
@@ -112,7 +101,7 @@ init:	## Creates the buildx instance
 .PHONY: build
 build:	## Build the project container image for local platform
 	$(info Building $(IMAGE)...)
-	docker build --rm --pull -f Dockerfile --tag $(IMAGE) .
+	docker build --rm --pull -f .devcontainer/Dockerfile --tag $(IMAGE) .
 
 .PHONY: push
 push:	## Push the image to the container registry
@@ -122,7 +111,7 @@ push:	## Push the image to the container registry
 .PHONY: buildx
 buildx:	## Build multi-platform image with buildx
 	$(info Building multi-platform image $(IMAGE) for $(PLATFORM)...)
-	docker buildx build --file Dockerfile --pull --platform=$(PLATFORM) --tag $(IMAGE) --push .
+	docker buildx build --file .devcontainer/Dockerfile --pull --platform=$(PLATFORM) --tag $(IMAGE) --push .
 
 .PHONY: remove
 remove:	## Stop and remove the buildx builder
