@@ -38,6 +38,7 @@ def create_app():
     # Initialize database
     # ------------------------------------------------------------------
     from service.models import db  # pylint: disable=import-outside-toplevel
+
     db.init_app(app)
 
     # ------------------------------------------------------------------
@@ -52,8 +53,7 @@ def create_app():
         try:
             db.create_all()
         except Exception as error:  # pylint: disable=broad-except
-            app.logger.critical("%s: Cannot continue", error)
-            sys.exit(4)
+            app.logger.warning("%s: Database not ready yet", error)  # pragma: no cover
 
         cli_commands.init_cli(app)
 
