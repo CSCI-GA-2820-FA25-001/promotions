@@ -104,5 +104,6 @@ def _init_logging_and_handlers():
     """Ensure handlers and logger are initialized at import time."""
     error_handlers.register_handlers(app)
     app.logger.info("Service initialized and handlers registered.")
-_init_logging_and_handlers()
 
+
+_init_logging_and_handlers()
