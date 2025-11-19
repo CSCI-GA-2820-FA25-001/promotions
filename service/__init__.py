@@ -74,11 +74,9 @@ def create_app():
         doc="/apidocs"              # URL for Swagger docs
     )
 
-    
     # Import and add the namespace AFTER api is created
     api.add_namespace(promotions_ns, path="/promotions")
 
-    
     # ------------------------------------------------------------------
     # Set up logging
     # ------------------------------------------------------------------
@@ -107,3 +105,4 @@ def _init_logging_and_handlers():
     error_handlers.register_handlers(app)
     app.logger.info("Service initialized and handlers registered.")
 _init_logging_and_handlers()
+
