@@ -74,19 +74,19 @@ def create_app():
         doc="/apidocs"              # URL for Swagger docs
     )
 
+    
     # Import and add the namespace AFTER api is created
     api.add_namespace(promotions_ns, path="/promotions")
+
     
     # ------------------------------------------------------------------
     # Set up logging
     # ------------------------------------------------------------------
     log_handlers.init_logging(app, "gunicorn.error")
-
     app.logger.info(70 * "*")
     app.logger.info("  S E R V I C E   R U N N I N G  ".center(70, "*"))
     app.logger.info(70 * "*")
     app.logger.info("Service initialized!")
-
     return app
 
 
@@ -106,6 +106,4 @@ def _init_logging_and_handlers():
     """Ensure handlers and logger are initialized at import time."""
     error_handlers.register_handlers(app)
     app.logger.info("Service initialized and handlers registered.")
-
 _init_logging_and_handlers()
-
