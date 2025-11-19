@@ -30,9 +30,11 @@ from service.models import (
     StatusEnum,
 )
 from service.common import status
+from flask_restx import Namespace, Resource, fields
 
 
 logger = logging.getLogger("flask.app")
+api = Namespace("promotions", description="Promotion operations")
 
 
 ######################################################################
