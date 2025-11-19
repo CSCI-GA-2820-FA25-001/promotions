@@ -33,7 +33,6 @@ from service.models import (
 from service.common import status
 
 
-
 logger = logging.getLogger("flask.app")
 api = Namespace("promotions", description="Promotion operations")
 
