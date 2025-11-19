@@ -24,7 +24,8 @@ import sys
 from flask import Flask
 from service import config
 from service.common import log_handlers
-
+from flask_restx import Api
+from service import routes  # noqa: F401 pylint: disable=wrong-import-position
 
 ######################################################################
 # Initialize the Flask instance
@@ -57,6 +58,22 @@ def create_app():
 
         cli_commands.init_cli(app)
 
+    ######################################################################
+    # Initialize Flask-RESTX API
+    ######################################################################
+    api = Api(
+        app,
+        version="1.0",
+        title="Promotion Service API",
+        description="A RESTX API for the Promotions microservice",
+        prefix="/api",              # REQUIRED BY HOMEWORK
+        doc="/apidocs"              # URL for Swagger docs
+    )
+
+    # Import and add the namespace AFTER api is created
+    from service.routes import api as promotions_ns
+    api.add_namespace(promotions_ns, path="/promotions")
+    
     # ------------------------------------------------------------------
     # Set up logging
     # ------------------------------------------------------------------
@@ -75,7 +92,6 @@ def create_app():
 # ----------------------------------------------------------------------
 app = create_app()
 
-from service import routes  # noqa: F401 pylint: disable=wrong-import-position
 
 # ----------------------------------------------------------------------
 # Trigger logger and handler registration explicitly (for test coverage)
@@ -90,3 +106,4 @@ def _init_logging_and_handlers():
 
 
 _init_logging_and_handlers()
+
