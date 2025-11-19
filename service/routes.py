@@ -61,9 +61,9 @@ def index():
 
 
 @api.route("", strict_slashes=False)
-class create_promotion(Resource):
+class CreatePromotion(Resource):
+    """Create a new promotion"""
     def post(self):
-        """Create a new promotion"""
         if not request.is_json:
             return (
                 jsonify(
