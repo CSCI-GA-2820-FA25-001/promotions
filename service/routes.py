@@ -25,7 +25,7 @@ import logging
 from datetime import datetime
 from flask import jsonify, request, url_for
 from flask import current_app as app
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource
 from service.models import (
     Promotion,
     StatusEnum,
@@ -60,7 +60,7 @@ def index():
 ######################################################################
 
 
-@api.route("",strict_slashes=False)
+@api.route("", strict_slashes=False)
 class create_promotion(Resource):
     def post(self):
         """Create a new promotion"""
