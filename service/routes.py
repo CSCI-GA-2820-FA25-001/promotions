@@ -14,208 +14,287 @@
 # limitations under the License.
 ######################################################################
 
+"""
+YourResourceModel Service
+
+This service implements a REST API that allows you to Create, Read, Update
+and Delete YourResourceModel
+"""
+
 import logging
 from datetime import datetime
-from flask import jsonify, request
+from flask import jsonify, request, url_for
 from flask import current_app as app
 from flask_restx import Namespace, Resource, fields
-from service.models import Promotion, StatusEnum
+from service.models import (
+    Promotion,
+    StatusEnum,
+)
 from service.common import status
 
 logger = logging.getLogger("flask.app")
-
-# Create namespace
 api = Namespace("promotions", description="Promotion operations")
 
-# Swagger Model definition
-promotion_model = api.model(
-    "Promotion",
-    {
-        "id": fields.Integer(readOnly=True),
-        "product_name": fields.String(required=True),
-        "description": fields.String(required=True),
-        "start_date": fields.String,
-        "expiration_date": fields.String,
-        "status": fields.String,
-    },
-)
 
 ######################################################################
-# INDEX — This should NOT be an API route
+# GET INDEX
 ######################################################################
 
 
 @app.route("/", methods=["GET"])
 def index():
-    """Root URL for UI"""
-    return jsonify({
+    """Root URL for the Promotions microservice"""
+    logger.info("Root URL accessed.")
+    response = {
         "service": "Promotions REST API Service",
         "version": "1.0",
-        "description": "This service allows CRUD operations on promotions"
-    }), status.HTTP_200_OK
+        "description": "This service allows CRUD operations on promotions",
+        "list_url": url_for("list_promotions", _external=True),
+    }
+
+    return jsonify(response), status.HTTP_200_OK
 
 
 ######################################################################
-# LIST + CREATE COLLECTION
+# CREATE
 ######################################################################
 
 
-@api.route("")
-class PromotionCollection(Resource):
-    """Handles listing and creating promotions"""
-
-    @api.doc("list_promotions")
-    @api.marshal_list_with(promotion_model)
-    def get(self):
-        """List promotions with filters"""
-
-        role = request.headers.get("X-Role") or request.args.get("role", "customer")
-        role = role.lower()
-        start_date_str = request.args.get("start_date")
-        end_date_str = request.args.get("end_date")
-        keyword = request.args.get("q") or request.args.get("keyword")
-
-        # Expire outdated promotions
-        expired = Promotion.query.filter(
-            Promotion.expiration_date < datetime.now(),
-            Promotion.status == StatusEnum.active,
-        ).all()
-        for p in expired:
-            p.status = StatusEnum.expired
-            p.update()
-
-        # Filter by role
-        if role == "customer":
-            query = Promotion.query.filter(Promotion.status == StatusEnum.active)
-        elif role == "supplier":
-            query = Promotion.query.filter(
-                Promotion.status.in_([StatusEnum.active, StatusEnum.expired])
-            )
-        elif role == "manager":
-            query = Promotion.query
-        else:
-            api.abort(400, "Invalid role value")
-
-        # Keyword filter
-        if keyword:
-            like = f"%{keyword}%"
-            query = query.filter(
-                (Promotion.product_name.ilike(like)) |
-                (Promotion.description.ilike(like))
-            )
-
-        # Date range filter
-        if start_date_str and end_date_str:
-            try:
-                start_date = datetime.fromisoformat(start_date_str)
-                end_date = datetime.fromisoformat(end_date_str)
-                query = query.filter(
-                    Promotion.start_date >= start_date,
-                    Promotion.expiration_date <= end_date,
-                )
-            except ValueError:
-                api.abort(400, "Invalid date format")
-
-        promotions = query.all()
-        return promotions, status.HTTP_200_OK
-
-    @api.doc("create_promotion")
-    @api.expect(promotion_model)
-    @api.marshal_with(promotion_model, code=201)
+@api.route("",strict_slashes=False)
+class create_promotion(Resource):
     def post(self):
         """Create a new promotion"""
         if not request.is_json:
-            api.abort(415, "Content-Type must be application/json")
-
-        promotion, error_code, error_type, error_msg = \
-            Promotion.create_promotion_with_error_handling(request.get_json())
-
-        if error_code:
-            api.abort(error_code, error_msg)
-
-        return promotion, status.HTTP_201_CREATED
-
-
-######################################################################
-# ITEM OPERATIONS: GET / PUT / DELETE
-######################################################################
-
-
-@api.route("/<int:promotion_id>")
-class PromotionResource(Resource):
-
-    @api.doc("get_promotion")
-    @api.marshal_with(promotion_model)
-    def get(self, promotion_id):
-        promotion = Promotion.find(promotion_id)
-        if not promotion:
-            api.abort(404, f"Promotion with id {promotion_id} not found")
-        return promotion, status.HTTP_200_OK
-
-    @api.expect(promotion_model)
-    @api.marshal_with(promotion_model)
-    def put(self, promotion_id):
-        if not request.is_json:
-            api.abort(415, "Content-Type must be application/json")
-
-        promotion, err_code, err_type, err_msg = \
-            Promotion.update_promotion_with_error_handling(
-                promotion_id, request.get_json()
+            return (
+                jsonify(
+                    error="Unsupported Media Type",
+                    message="Content-Type must be application/json",
+                ),
+                status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             )
 
-        if err_code:
-            api.abort(err_code, err_msg)
+        # Use the model method to handle creation with error handling
+        promotion, error_code, error_type, error_message = Promotion.create_promotion_with_error_handling(request.get_json())
 
-        return promotion, status.HTTP_200_OK
+        if error_code:
+            return (
+                jsonify(error=error_type, message=error_message),
+                error_code,
+            )
 
-    def delete(self, promotion_id):
-        promotion = Promotion.find(promotion_id)
-        if not promotion:
-            return "", status.HTTP_204_NO_CONTENT
+        location_url = url_for("get_promotion", promotion_id=promotion.id, _external=True)
+        return (
+            jsonify(promotion.serialize()),
+            status.HTTP_201_CREATED,
+            {"Location": location_url},
+        )
 
-        if promotion.status == StatusEnum.active:
-            api.abort(409, "Cannot delete active promotion")
 
-        promotion.delete()
+######################################################################
+# READ
+######################################################################
+
+
+@app.route("/promotions/<int:promotion_id>", methods=["GET"])
+def get_promotion(promotion_id):
+    """Read a promotion"""
+    promotion = Promotion.find(promotion_id)
+    if not promotion:
+        return (
+            jsonify(
+                error="Not Found",
+                message=f"Promotion with id '{promotion_id}' was not found.",
+            ),
+            status.HTTP_404_NOT_FOUND,
+        )
+    return jsonify(promotion.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# UPDATE
+######################################################################
+
+
+@app.route("/promotions/<int:promotion_id>", methods=["PUT"])
+def update_promotion(promotion_id):
+    """Update a promotion"""
+    if not request.is_json:
+        return (
+            jsonify(
+                error="Unsupported Media Type",
+                message="Content-Type must be application/json",
+            ),
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+    # Use the model method to handle update with error handling
+    promotion, error_code, error_type, error_message = (
+        Promotion.update_promotion_with_error_handling(
+            promotion_id, request.get_json()
+        )
+    )
+
+    if error_code:
+        return (
+            jsonify(error=error_type, message=error_message),
+            error_code,
+        )
+
+    return jsonify(promotion.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# DELETE
+######################################################################
+
+
+@app.route("/promotions/<int:promotion_id>", methods=["DELETE"])
+def delete_promotion(promotion_id):
+    """Delete a promotion"""
+    promotion = Promotion.find(promotion_id)
+    if not promotion:
+        # Idempotent delete — return 204 even if not found
         return "", status.HTTP_204_NO_CONTENT
 
+    # Check for active promotions before deleting
+    if promotion.status == StatusEnum.active:
+        return (
+            jsonify(error="Conflict", message="Cannot delete active promotion"),
+            status.HTTP_409_CONFLICT,
+        )
 
-######################################################################
-# DUPLICATE ACTION
-######################################################################
-
-
-@api.route("/<int:promotion_id>/duplicate")
-class DuplicatePromotion(Resource):
-
-    @api.doc("duplicate_promotion")
-    @api.marshal_with(promotion_model, code=201)
-    def post(self, promotion_id):
-
-        role = request.headers.get("X-Role")
-        if not role:
-            api.abort(401, "Authentication required")
-
-        if role.lower() != "administrator":
-            api.abort(403, "Administrator privileges required")
-
-        if not request.is_json:
-            api.abort(415, "Content-Type must be application/json")
-
-        new_promo, err_code, err_type, err_msg = \
-            Promotion.duplicate_promotion_with_error_handling(promotion_id)
-
-        if err_code:
-            api.abort(err_code, err_msg)
-
-        return new_promo, status.HTTP_201_CREATED
+    # Proceed with deletion
+    promotion.delete()
+    return "", status.HTTP_204_NO_CONTENT
 
 
 ######################################################################
-# HEALTH — Keep this as app.route (not part of API)
+# LIST
+######################################################################
+
+
+@app.route("/promotions", methods=["GET"])
+def list_promotions():
+    """List promotions filtered by role and optionally by date range and keyword"""
+    role = (
+        request.headers.get("X-Role") or request.args.get("role", "customer")
+    ).lower()
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    keyword = request.args.get("q") or request.args.get("keyword")
+
+    # the system will automatically check the status of promotion
+    expired = Promotion.query.filter(
+        Promotion.expiration_date < datetime.now(),
+        Promotion.status == StatusEnum.active,
+    ).all()
+    for pro in expired:
+        pro.status = StatusEnum.expired
+        pro.update()
+
+    # 1) Base query by role
+    if role == "customer":
+        query = Promotion.query.filter(Promotion.status == StatusEnum.active)
+    elif role == "supplier":
+        query = Promotion.query.filter(
+            Promotion.status.in_([StatusEnum.active, StatusEnum.expired])
+        )
+    elif role == "manager":
+        query = Promotion.query
+    else:
+        return (
+            jsonify(error="Bad Request", message="Invalid role value"),
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    # 2) Keyword search (product_name or description)
+    if keyword:
+        like = f"%{keyword}%"
+        query = query.filter(
+            (Promotion.product_name.ilike(like)) | (Promotion.description.ilike(like))
+        )
+
+    # 3) Optional date range filter
+    try:
+        if start_date_str and end_date_str:
+            start_date = datetime.fromisoformat(start_date_str.replace("Z", "+00:00"))
+            end_date = datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
+            query = query.filter(
+                Promotion.start_date >= start_date,
+                Promotion.expiration_date <= end_date,
+            )
+    except ValueError:
+        return (
+            jsonify(error="Bad Request", message="Invalid date format"),
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    # 4) Return results
+    result = [p.serialize() for p in query.all()]
+    return jsonify(result), status.HTTP_200_OK
+
+
+######################################################################
+# DUPLICATE
+######################################################################
+
+
+@app.route("/promotions/<int:promotion_id>/duplicate", methods=["POST"])
+def duplicate_promotion(promotion_id):
+    """Duplicate an existing promotion"""
+    # Check authentication
+    role = request.headers.get("X-Role")
+    if not role:
+        return (
+            jsonify(error="Unauthorized", message="Authentication required"),
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Check authorization (only administrators can duplicate)
+    if role.lower() != "administrator":
+        return (
+            jsonify(
+                error="Forbidden",
+                message="Administrator privileges required to duplicate promotions",
+            ),
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    # Check content type
+    if not request.is_json:
+        return (
+            jsonify(
+                error="Unsupported Media Type",
+                message="Content-Type must be application/json",
+            ),
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+    # Use the model method to handle duplication with error handling
+    new_promotion, error_code, error_type, error_message = Promotion.duplicate_promotion_with_error_handling(promotion_id)
+
+    if error_code:
+        return (
+            jsonify(error=error_type, message=error_message),
+            error_code,
+        )
+
+    # Return the created promotion
+    location_url = url_for(
+        "get_promotion", promotion_id=new_promotion.id, _external=True
+    )
+    return (
+        jsonify(new_promotion.serialize()),
+        status.HTTP_201_CREATED,
+        {"Location": location_url},
+    )
+
+######################################################################
+# health end point
 ######################################################################
 
 
 @app.route("/health", methods=["GET"])
 def health():
+    """Health check endpoint for Kubernetes"""
     return jsonify({"status": "OK"}), status.HTTP_200_OK
