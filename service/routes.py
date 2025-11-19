@@ -25,12 +25,13 @@ import logging
 from datetime import datetime
 from flask import jsonify, request, url_for
 from flask import current_app as app
+from flask_restx import Namespace
 from service.models import (
     Promotion,
     StatusEnum,
 )
 from service.common import status
-from flask_restx import Namespace
+
 
 
 logger = logging.getLogger("flask.app")
