@@ -43,6 +43,8 @@ promotion_model = api.model(
 ######################################################################
 # INDEX — This should NOT be an API route
 ######################################################################
+
+
 @app.route("/", methods=["GET"])
 def index():
     """Root URL for UI"""
@@ -56,6 +58,8 @@ def index():
 ######################################################################
 # LIST + CREATE COLLECTION
 ######################################################################
+
+
 @api.route("")
 class PromotionCollection(Resource):
     """Handles listing and creating promotions"""
@@ -135,6 +139,8 @@ class PromotionCollection(Resource):
 ######################################################################
 # ITEM OPERATIONS: GET / PUT / DELETE
 ######################################################################
+
+
 @api.route("/<int:promotion_id>")
 class PromotionResource(Resource):
 
@@ -177,6 +183,8 @@ class PromotionResource(Resource):
 ######################################################################
 # DUPLICATE ACTION
 ######################################################################
+
+
 @api.route("/<int:promotion_id>/duplicate")
 class DuplicatePromotion(Resource):
 
@@ -206,6 +214,8 @@ class DuplicatePromotion(Resource):
 ######################################################################
 # HEALTH — Keep this as app.route (not part of API)
 ######################################################################
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "OK"}), status.HTTP_200_OK
