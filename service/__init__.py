@@ -26,10 +26,14 @@ from service import config
 from service.common import log_handlers
 from flask_restx import Api
 from service import routes  # noqa: F401 pylint: disable=wrong-import-position
+from service.routes import api as promotions_ns
+
 
 ######################################################################
 # Initialize the Flask instance
 ######################################################################
+
+
 def create_app():
     """Initialize the core Flask application."""
     app = Flask(__name__)  # pylint: disable=redefined-outer-name
@@ -71,7 +75,6 @@ def create_app():
     )
 
     # Import and add the namespace AFTER api is created
-    from service.routes import api as promotions_ns
     api.add_namespace(promotions_ns, path="/promotions")
     
     # ------------------------------------------------------------------
@@ -103,7 +106,6 @@ def _init_logging_and_handlers():
     """Ensure handlers and logger are initialized at import time."""
     error_handlers.register_handlers(app)
     app.logger.info("Service initialized and handlers registered.")
-
 
 _init_logging_and_handlers()
 
