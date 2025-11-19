@@ -22,9 +22,9 @@ and SQL database
 
 import sys
 from flask import Flask
+from flask_restx import Api
 from service import config
 from service.common import log_handlers
-from flask_restx import Api
 from service import routes  # noqa: F401 pylint: disable=wrong-import-position
 from service.routes import api as promotions_ns
 
