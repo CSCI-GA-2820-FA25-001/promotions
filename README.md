@@ -17,9 +17,28 @@ It demonstrates:
 - **Continuous Integration (CI)** with GitHub Actions
 - **Automated coverage reporting** with Codecov
 - **Containerized deployment** using Docker and VS Code Dev Containers
+- **Web-based User Interface** for managing promotions
 
 The service supports full **CRUD**, **search**, and **role-based listing** for product promotions,  
 achieving **≥ 98 % coverage** (≥ 95 % required).
+
+### 🌐 Web User Interface
+
+A modern, responsive web interface is available for managing promotions through your browser.
+
+**Access the UI:**
+- Navigate to **[http://localhost:8080/ui](http://localhost:8080/ui)** after starting the service
+
+**UI Features:**
+- Create new promotions with form validation
+- View all promotions in a sortable table
+- Edit existing promotions inline
+- Delete promotions with confirmation dialog
+- Real-time discount price calculation display
+- Status badges (draft, active, expired, deleted)
+- Responsive design (mobile, tablet, desktop)
+- Form validation and error handling
+- Loading states and success messages
 
 ---
 
@@ -45,6 +64,9 @@ make run
 ````
 
 Once running, the service will be available at **[http://localhost:8080](http://localhost:8080)** inside the container.
+
+**Access the Web UI:**  
+Navigate to **[http://localhost:8080/ui](http://localhost:8080/ui)** to manage promotions through the browser interface.
 
 ---
 
@@ -83,6 +105,7 @@ Coverage reports are uploaded to **Codecov**, with badges above showing build an
 ## 🧮 Features
 
 * 🧩 Complete CRUD + List Endpoints (`/promotions`, `/promotions/<id>`)
+* 🌐 **Web User Interface** for browser-based promotion management
 * 🧮 Automatic discounted price calculation (`amount` or `percent`)
 * 🔐 Role-based views for Customer / Supplier / Manager
 * 🕒 Expiration logic with state transitions (`draft → active → expired → deleted`)
@@ -143,6 +166,8 @@ Both `flake8` and `pylint` must pass with ≥ 9.5/10 rating as required by Profe
 | GET    | `/promotions`                | List/Search promotions (role-based) |
 | POST   | `/promotions/<id>/duplicate` | Duplicate promotion (admin only)    |
 | GET    | `/`                          | Service metadata                    |
+| GET    | `/ui`                        | Web user interface                   |
+| GET    | `/health`                    | Health check endpoint               |
 
 ---
 
@@ -156,6 +181,8 @@ This service uses an `X-Role` HTTP header for role-based access control.
 * `customer` → Read only (active promotions)
 * `supplier` → Read active + expired
 * `manager` → Read all (promotions incl. deleted)
+
+**Note:** The web UI (`/ui`) uses the `manager` role by default to display all promotions for management purposes.
 
 Example request:
 
