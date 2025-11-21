@@ -20,6 +20,7 @@ This module creates and configures the Flask app and sets up the logging
 and SQL database
 """
 
+import os
 import sys
 from flask import Flask
 from service import config
@@ -31,7 +32,6 @@ from service.common import log_handlers
 ######################################################################
 def create_app():
     """Initialize the core Flask application."""
-    import os
     # Set static folder to root directory's static folder
     static_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
     app = Flask(__name__, static_folder=static_folder, static_url_path='/static')  # pylint: disable=redefined-outer-name
