@@ -698,6 +698,24 @@ class TestYourResourceService(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_duplicate_promotion_wrong_content_type(self):
+        """It should return 415 when Content-Type is not JSON"""
+        # Create an original promotion
+        original_promo = PromotionFactory()
+        original_promo.create()
+        original_id = original_promo.id
+
+        resp = self.client.post(
+            f"/promotions/{original_id}/duplicate",
+            data="some data",
+            content_type="text/plain",
+            headers={"X-Role": "administrator"}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+        data = resp.get_json()
+        self.assertEqual(data["error"], "Unsupported Media Type")
+        self.assertIn("Content-Type must be application/json", data["message"])
+
     def test_duplicate_promotion_validation_errors(self):
         """It should return 422 for validation errors in overrides"""
         # Create an original promotion
@@ -796,6 +814,18 @@ class TestYourResourceService(TestCase):
         # query the database to make sure its status is still active
         test = Promotion.find(promo.id)
         self.assertEqual(test.status, StatusEnum.active)
+
+    ######################################################################
+    # UI ENDPOINT TESTS
+    ######################################################################
+    def test_ui_endpoint(self):
+        """Test the /ui endpoint serves the UI"""
+        resp = self.client.get("/ui")
+        assert resp.status_code == 200
+        # Check that it returns HTML content
+        assert "text/html" in resp.content_type or resp.is_json is False
+        # Verify the response contains expected HTML
+        assert resp.data is not None
 
     ######################################################################
     # HEALTHENDPOINT TESTS
