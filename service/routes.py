@@ -22,8 +22,9 @@ and Delete YourResourceModel
 """
 
 import logging
+import os
 from datetime import datetime
-from flask import jsonify, request, url_for
+from flask import jsonify, request, url_for, send_from_directory
 from flask import current_app as app
 from service.models import (
     Promotion,
@@ -47,9 +48,22 @@ def index():
         "version": "1.0",
         "description": "This service allows CRUD operations on promotions",
         "list_url": url_for("list_promotions", _external=True),
+        "ui_url": url_for("ui", _external=True),
     }
 
     return jsonify(response), status.HTTP_200_OK
+
+
+######################################################################
+# GET UI
+######################################################################
+@app.route("/ui", methods=["GET"])
+def ui():
+    """Serve the Promotions Management UI"""
+    logger.info("UI accessed.")
+    # Get the directory where the static files are located
+    static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+    return send_from_directory(static_dir, "index.html")
 
 
 ######################################################################
