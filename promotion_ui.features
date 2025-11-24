@@ -1,0 +1,54 @@
+Feature: Promotion Management UI
+  As an eCommerce manager
+  I want a web interface to manage promotions
+  So that I can Create, Read, Update, Delete, List, Query and Duplicate promotions
+
+  Scenario: Create a new promotion
+    Given I am on the Promotions UI page
+    When I enter a product name in the Create form
+    And I enter a description in the Create form
+    And I click the "Create" button
+    Then I should see a success status
+    And I should see the created promotion in the result area
+
+  Scenario: Read a promotion by ID
+    Given a promotion already exists
+    And I am on the Promotions UI page
+    When I enter an ID in the Read form
+    And I click the "Read" button
+    Then I should see that promotion's details
+
+  Scenario: Update a promotion
+    Given a promotion already exists
+    And I am on the Promotions UI page
+    When I enter the ID and new fields in the Update form
+    And I click the "Update" button
+    Then I should see the updated information
+
+  Scenario: Delete a promotion
+    Given a promotion already exists
+    And I am on the Promotions UI page
+    When I enter the ID in the Delete form
+    And I click the "Delete" button
+    Then I should see a status code 204
+    And the promotion should not appear in the list anymore
+
+  Scenario: List promotions
+    Given promotions exist
+    And I am on the Promotions UI page
+    When I click the "List" button
+    Then I should see a list of promotions
+
+  Scenario: Query promotions
+    Given promotions exist
+    And I am on the Promotions UI page
+    When I enter a keyword in the Query form
+    And I click the "Query" button
+    Then I should see promotions filtered by the keyword
+
+  Scenario: Duplicate a promotion
+    Given a promotion already exists
+    And I am on the Promotions UI page
+    When I enter the ID in the Duplicate form
+    And I click the "Duplicate" button
+    Then I should see a new duplicated promotion created
