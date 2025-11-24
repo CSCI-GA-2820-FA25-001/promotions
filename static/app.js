@@ -22,11 +22,36 @@ const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
 const promotionTypeSelect = document.getElementById('promotion_type');
 const discountFields = document.getElementById('discountFields');
+const openCreateBtn = document.getElementById("openCreateBtn");
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     loadPromotions();
     setupEventListeners();
+});
+
+// ===== Show Create Form =====
+openCreateBtn.addEventListener("click", () => {
+    formContainer.style.display = "block";
+    formTitle.textContent = "Create New Promotion";
+    submitBtn.textContent = "Create Promotion";
+
+    // Clear previous values
+    promotionForm.reset();
+    document.getElementById("promotionId").value = "";
+});
+
+function hideForm() {
+    const formContainer = document.getElementById("formContainer");
+    formContainer.style.display = "none";
+
+    // 清空 form 内容
+    const promotionForm = document.getElementById("promotionForm");
+    promotionForm.reset();
+}
+
+cancelBtn.addEventListener("click", () => {
+    hideForm();
 });
 
 // Setup event listeners
@@ -262,6 +287,9 @@ async function updatePromotion(id, promotionData) {
 async function editPromotion(id) {
     showLoading();
     try {
+        // show container
+        const formContainer = document.getElementById("formContainer");
+        formContainer.style.display = "block";
         const response = await fetch(`${PROMOTIONS_ENDPOINT}/${id}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
