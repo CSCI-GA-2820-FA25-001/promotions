@@ -33,7 +33,7 @@ from service.common import log_handlers
 def create_app():
     """Initialize the core Flask application."""
     # Set static folder to root directory's static folder
-    app = Flask( __name__, static_folder="static", static_url_path="/static")  # pylint: disable=redefined-outer-name
+    app = Flask(__name__, static_folder="static", static_url_path="/static")  # pylint: disable=redefined-outer-name
     app.config.from_object(config)
 
     # ------------------------------------------------------------------
@@ -75,7 +75,7 @@ def create_app():
 # ----------------------------------------------------------------------
 # Create the Flask app instance
 # ----------------------------------------------------------------------
-app = create_app() # pylint: disable=redefined-outer-name
+app = create_app()
 
 from service import routes  # noqa: F401 pylint: disable=wrong-import-position
 
