@@ -22,9 +22,8 @@ and Delete YourResourceModel
 """
 
 import logging
-import os
 from datetime import datetime
-from flask import jsonify, request, url_for, send_from_directory
+from flask import jsonify, request, url_for
 from flask import current_app as app
 from service.models import (
     Promotion,
