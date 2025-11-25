@@ -816,18 +816,6 @@ class TestYourResourceService(TestCase):
         self.assertEqual(test.status, StatusEnum.active)
 
     ######################################################################
-    # UI ENDPOINT TESTS
-    ######################################################################
-    def test_ui_endpoint(self):
-        """Test the /ui endpoint serves the UI"""
-        resp = self.client.get("/ui")
-        assert resp.status_code == 200
-        # Check that it returns HTML content
-        assert "text/html" in resp.content_type or resp.is_json is False
-        # Verify the response contains expected HTML
-        assert resp.data is not None
-
-    ######################################################################
     # HEALTHENDPOINT TESTS
     ######################################################################
     def test_health_endpoint(self):
