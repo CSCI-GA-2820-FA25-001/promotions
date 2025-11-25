@@ -80,15 +80,10 @@ class TestYourResourceService(TestCase):
     ######################################################################
 
     def test_index(self):
-        """It should return service metadata with correct fields"""
-        resp = self.client.get("/")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        body = resp.get_json()
-        self.assertIn("service", body)
-        self.assertIn("version", body)
-        self.assertIn("description", body)
-        self.assertIn("list_url", body)
-        self.assertTrue(body["list_url"].startswith("http"))
+        """It should call the Home Page"""
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(b"Pet Demo REST API Service", response.data)
 
     ######################################################################
     #  C R E A T E   T E S T S
