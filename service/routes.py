@@ -55,18 +55,6 @@ def index():
 
 
 ######################################################################
-# GET UI
-######################################################################
-@app.route("/ui", methods=["GET"])
-def ui():
-    """Serve the Promotions Management UI"""
-    logger.info("UI accessed.")
-    # Get the directory where the static files are located
-    static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
-    return send_from_directory(static_dir, "index.html")
-
-
-######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
 
