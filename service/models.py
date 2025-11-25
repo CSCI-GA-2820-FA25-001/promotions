@@ -267,6 +267,10 @@ class Promotion(db.Model):  # pylint: disable=too-many-instance-attributes
             ),
             "promotion_type": override_data.get("promotion_type", original_promotion.promotion_type.value),
             "expiration_date": override_data.get("expiration_date", original_promotion.expiration_date.isoformat()),
+            "status": override_data.get(
+                "status",
+                (original_promotion.status.value if original_promotion.status else None),
+            ),
         }
 
         # Only add start_date if it exists in original or override

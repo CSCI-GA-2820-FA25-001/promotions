@@ -11,6 +11,8 @@
         <header>
             <h1>Promotions Management</h1>
             <div class="header-actions">
+
+                <!-- Existing create button -->
                 <button id="openCreateBtn" class="btn btn-primary">Create Promotion</button>
             </div>
         </header>
@@ -105,7 +107,34 @@
         <!-- Promotions Table -->
         <div class="table-container">
             <div class="table-header">
-                <h2>Promotions List</h2>
+                <button id="toggleListBtn" class="btn btn-primary toggle-button">
+                    List All Promotions ▼
+                </button>
+            </div>
+
+            <div class="search-container">
+                <!-- Keyword search -->
+                <div class="search-row">
+                    <label for="keywordSearch">Keyword Search:</label>
+                    <input
+                        type="text"
+                        id="keywordSearch"
+                        class="search-input"
+                        placeholder="Product name or description"
+                    />
+                    <button id="keywordSearchBtn" class="btn btn-secondary">Search by Keyword</button>
+                </div>
+            
+                <!-- Date range search -->
+                <div class="search-row">
+                    <label for="startDateSearch">Start Date:</label>
+                    <input type="datetime-local" id="startDateSearch" />
+            
+                    <label for="endDateSearch">End Date:</label>
+                    <input type="datetime-local" id="endDateSearch" />
+            
+                    <button id="dateSearchBtn" class="btn btn-secondary">Search by Date</button>
+                </div>
             </div>
 
             <div id="loadingIndicator" class="loading-indicator">
