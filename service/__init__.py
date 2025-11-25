@@ -77,7 +77,7 @@ def create_app():
 # ----------------------------------------------------------------------
 # Create the Flask app instance
 # ----------------------------------------------------------------------
-app = create_app()
+app = create_app() # pylint: disable=redefined-outer-name
 
 from service import routes  # noqa: F401 pylint: disable=wrong-import-position
 
