@@ -414,3 +414,38 @@ header h1 {
     }
 }
 
+.toggle-button {
+    font-size: 1rem;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+}
+
+.toggle-button:focus {
+    outline: none;
+}
+
+.search-container {
+    margin: 0.75rem 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.search-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.search-row label {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.search-input {
+    padding: 0.35rem 0.5rem;
+    min-width: 220px;
+}
+
+

@@ -23,11 +23,20 @@ const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
 const promotionTypeSelect = document.getElementById('promotion_type');
 const discountFields = document.getElementById('discountFields');
 const openCreateBtn = document.getElementById("openCreateBtn");
+const toggleListBtn = document.getElementById('toggleListBtn');
+const keywordSearchInput = document.getElementById('keywordSearch');
+const keywordSearchBtn = document.getElementById('keywordSearchBtn');
+const startDateSearchInput = document.getElementById('startDateSearch');
+const endDateSearchInput = document.getElementById('endDateSearch');
+const dateSearchBtn = document.getElementById('dateSearchBtn');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
-    loadPromotions();
+    promotionsTable.style.display = 'none';
+    emptyState.style.display = 'none';
+    loadingIndicator.style.display = 'none';
     setupEventListeners();
+    handlePromotionTypeChange();
 });
 
 // ===== Show Create Form =====
@@ -68,6 +77,60 @@ function setupEventListeners() {
             hideDeleteModal();
         }
     });
+
+    toggleListBtn.addEventListener('click', async () => {
+        const collapsed =
+            promotionsTable.style.display === 'none' &&
+            emptyState.style.display === 'none';
+
+        if (collapsed) {
+            // EXPAND
+            toggleListBtn.textContent = "List All Promotions ▼";
+            loadingIndicator.style.display = 'block';
+            await loadPromotions();   // fetch & display
+            loadingIndicator.style.display = 'none';
+        } else {
+            // COLLAPSE
+            toggleListBtn.textContent = "List All Promotions ▲";
+            promotionsTable.style.display = 'none';
+            emptyState.style.display = 'none';
+        }
+    });
+
+    keywordSearchBtn.addEventListener('click', () => {
+        const term = keywordSearchInput.value.trim();
+        promotionsTableBody.innerHTML = "";
+        promotionsTable.style.display = "none";
+        emptyState.style.display = "none";
+        // Call list_promotions with ?q=term
+        loadPromotions({ keyword: term || null });
+    });
+
+    // Hit Enter in the keyword input to search
+    keywordSearchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            keywordSearchBtn.click();
+        }
+    });
+
+    // 📅 Date range search
+    dateSearchBtn.addEventListener('click', () => {
+        const startVal = startDateSearchInput.value;
+        const endVal = endDateSearchInput.value;
+        promotionsTableBody.innerHTML = "";
+        promotionsTable.style.display = "none";
+        emptyState.style.display = "none";
+
+        if (!startVal || !endVal) {
+            showMessage('Please provide both start and end dates.', 'error');
+            return;
+        }
+
+        loadPromotions({
+            startDate: startVal,
+            endDate: endVal,
+        });
+    });
 }
 
 // Show/hide discount fields based on promotion type
@@ -85,9 +148,34 @@ function handlePromotionTypeChange() {
 }
 
 // Load all promotions
-async function loadPromotions() {
+async function loadPromotions(options = {}) {
+    const { keyword = null, startDate = null, endDate = null } = options;
     showLoading();
     try {
+        // Build query params to match list_promotions in routes.py
+        const params = new URLSearchParams();
+
+        if (keyword) {
+            // list_promotions uses `q` or `keyword`
+            params.append('q', keyword);
+        }
+
+        if (startDate && endDate) {
+            // Backend expects ISO-like strings; reuse your formatter
+            const startIso = formatDateTimeForAPI(startDate);
+            const endIso = formatDateTimeForAPI(endDate);
+            if (startIso && endIso) {
+                params.append('start_date', startIso);
+                params.append('end_date', endIso);
+            }
+        }
+
+        let url = PROMOTIONS_ENDPOINT;
+        const queryString = params.toString();
+        if (queryString) {
+            url += `?${queryString}`;
+        }
+
         // Use 'manager' role to see all promotions including draft, active, expired
         const response = await fetch(PROMOTIONS_ENDPOINT, {
             headers: {
@@ -169,6 +257,7 @@ function createPromotionRow(promotion) {
         <td>${expirationDate}</td>
         <td class="actions">
             <button class="btn btn-small btn-primary" onclick="editPromotion(${promotion.id})">Edit</button>
+            <button class="btn btn-small btn-primary" onclick="duplicatePromotion(${promotion.id})">Duplicate</button>
             <button class="btn btn-small btn-danger" onclick="showDeleteModal(${promotion.id})">Delete</button>
         </td>
     `;
@@ -374,6 +463,43 @@ async function confirmDelete() {
     }
 }
 
+// Duplicate an existing promotion
+async function duplicatePromotion(id) {
+    showLoading();
+    try {
+        console.log('Duplicating promotion with id:', id);
+
+        const response = await fetch(`${PROMOTIONS_ENDPOINT}/${id}/duplicate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Role': 'administrator'   // required by duplicate_promotion route
+            },
+            body: JSON.stringify({})        // route requires JSON, even though it doesn't use it
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            hideLoading();
+            handleApiError(data, response.status);
+            return;
+        }
+
+        showMessage('Promotion duplicated successfully!', 'success');
+
+        // Reload the promotions list so the new one appears
+        await loadPromotions();  // or loadPromotions(currentSearchTerm) if you track it
+    } catch (error) {
+        hideLoading();
+        showMessage('Error duplicating promotion: ' + error.message, 'error');
+        console.error('Error duplicating promotion:', error);
+    } finally {
+        hideLoading();
+    }
+}
+
+
 // Reset form to create mode
 function resetForm() {
     promotionForm.reset();
@@ -518,5 +644,6 @@ function escapeHtml(text) {
 
 // Make functions globally accessible
 window.editPromotion = editPromotion;
+window.duplicatePromotion = duplicatePromotion;
 window.showDeleteModal = showDeleteModal;
 
