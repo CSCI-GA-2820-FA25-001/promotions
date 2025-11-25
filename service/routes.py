@@ -42,15 +42,7 @@ logger = logging.getLogger("flask.app")
 def index():
     """Root URL for the Promotions microservice"""
     logger.info("Root URL accessed.")
-    response = {
-        "service": "Promotions REST API Service",
-        "version": "1.0",
-        "description": "This service allows CRUD operations on promotions",
-        "list_url": url_for("list_promotions", _external=True),
-        "ui_url": url_for("ui", _external=True),
-    }
-
-    return jsonify(response), status.HTTP_200_OK
+    return app.send_static_file("index.html")
 
 
 ######################################################################
