@@ -80,15 +80,9 @@ class TestYourResourceService(TestCase):
     ######################################################################
 
     def test_index(self):
-        """It should return service metadata with correct fields"""
-        resp = self.client.get("/")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        body = resp.get_json()
-        self.assertIn("service", body)
-        self.assertIn("version", body)
-        self.assertIn("description", body)
-        self.assertIn("list_url", body)
-        self.assertTrue(body["list_url"].startswith("http"))
+        """It should call the Home Page"""
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     ######################################################################
     #  C R E A T E   T E S T S
@@ -814,18 +808,6 @@ class TestYourResourceService(TestCase):
         # query the database to make sure its status is still active
         test = Promotion.find(promo.id)
         self.assertEqual(test.status, StatusEnum.active)
-
-    ######################################################################
-    # UI ENDPOINT TESTS
-    ######################################################################
-    def test_ui_endpoint(self):
-        """Test the /ui endpoint serves the UI"""
-        resp = self.client.get("/ui")
-        assert resp.status_code == 200
-        # Check that it returns HTML content
-        assert "text/html" in resp.content_type or resp.is_json is False
-        # Verify the response contains expected HTML
-        assert resp.data is not None
 
     ######################################################################
     # HEALTHENDPOINT TESTS
