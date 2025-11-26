@@ -30,6 +30,7 @@ from service.models import (
     StatusEnum,
 )
 from service.common import status
+from service.models import db
 
 
 logger = logging.getLogger("flask.app")
@@ -296,7 +297,7 @@ def health():
 ######################################################################
 # RESET (for BDD test only)
 ######################################################################
-from service.models import db
+
 
 @app.route("/promotions/reset", methods=["DELETE"])
 def reset_promotion():
