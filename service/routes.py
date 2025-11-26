@@ -292,3 +292,16 @@ def duplicate_promotion(promotion_id):
 def health():
     """Health check endpoint for Kubernetes"""
     return jsonify({"status": "OK"}), status.HTTP_200_OK
+
+######################################################################
+# RESET (for BDD test only)
+######################################################################
+from service.models import db
+
+@app.route("/promotions/reset", methods=["DELETE"])
+def reset_promotion():
+    """Reset the database for BDD tests"""
+    db.session.query(Promotion).delete()
+    db.session.commit()
+    return jsonify({"message": "Database reset"}), status.HTTP_200_OK
+
