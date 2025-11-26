@@ -305,4 +305,3 @@ def reset_promotion():
     db.session.query(Promotion).delete()
     db.session.commit()
     return jsonify({"message": "Database reset"}), status.HTTP_200_OK
-
