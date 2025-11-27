@@ -817,3 +817,15 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/health")
         assert resp.status_code == 200
         assert resp.get_json() == {"status": "OK"}
+    
+    def test_reset_promotions_endpoint(self):
+        """It should reset all promotions (BDD helper endpoint)"""
+        promo = PromotionFactory()
+        promo.create()
+
+        resp = self.client.delete("/promotions/reset")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+        resp = self.client.get("/promotions")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.get_json(), [])
