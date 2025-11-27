@@ -25,11 +25,8 @@ import logging
 from datetime import datetime
 from flask import jsonify, request, url_for
 from flask import current_app as app
-from service.models import (
-    Promotion,
-    StatusEnum,
-)
 from service.common import status
+from service.models import Promotion, StatusEnum, db
 
 
 logger = logging.getLogger("flask.app")
@@ -145,19 +142,20 @@ def update_promotion(promotion_id):
 @app.route("/promotions/<int:promotion_id>", methods=["DELETE"])
 def delete_promotion(promotion_id):
     """Delete a promotion"""
+
     promotion = Promotion.find(promotion_id)
     if not promotion:
-        # Idempotent delete — return 204 even if not found
         return "", status.HTTP_204_NO_CONTENT
 
-    # Check for active promotions before deleting
     if promotion.status == StatusEnum.active:
         return (
-            jsonify(error="Conflict", message="Cannot delete active promotion"),
-            status.HTTP_409_CONFLICT,
+            jsonify(
+                error="Conflict",
+                message="Cannot delete active promotion"
+            ),
+            status.HTTP_409_CONFLICT
         )
 
-    # Proceed with deletion
     promotion.delete()
     return "", status.HTTP_204_NO_CONTENT
 
@@ -231,12 +229,9 @@ def list_promotions():
 ######################################################################
 # DUPLICATE
 ######################################################################
-
-
 @app.route("/promotions/<int:promotion_id>/duplicate", methods=["POST"])
 def duplicate_promotion(promotion_id):
     """Duplicate an existing promotion"""
-    # Check authentication
     role = request.headers.get("X-Role")
     if not role:
         return (
@@ -244,7 +239,6 @@ def duplicate_promotion(promotion_id):
             status.HTTP_401_UNAUTHORIZED,
         )
 
-    # Check authorization (only administrators can duplicate)
     if role.lower() != "administrator":
         return (
             jsonify(
@@ -254,7 +248,6 @@ def duplicate_promotion(promotion_id):
             status.HTTP_403_FORBIDDEN,
         )
 
-    # Check content type
     if not request.is_json:
         return (
             jsonify(
@@ -264,16 +257,13 @@ def duplicate_promotion(promotion_id):
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
         )
 
-    # Use the model method to handle duplication with error handling
-    new_promotion, error_code, error_type, error_message = Promotion.duplicate_promotion_with_error_handling(promotion_id)
+    new_promotion, error_code, error_type, error_message = (
+        Promotion.duplicate_promotion_with_error_handling(promotion_id)
+    )
 
     if error_code:
-        return (
-            jsonify(error=error_type, message=error_message),
-            error_code,
-        )
+        return jsonify(error=error_type, message=error_message), error_code
 
-    # Return the created promotion
     location_url = url_for(
         "get_promotion", promotion_id=new_promotion.id, _external=True
     )
@@ -283,12 +273,22 @@ def duplicate_promotion(promotion_id):
         {"Location": location_url},
     )
 
+
 ######################################################################
 # health end point
 ######################################################################
-
-
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint for Kubernetes"""
     return jsonify({"status": "OK"}), status.HTTP_200_OK
+
+
+######################################################################
+# RESET DATABASE FOR BDD
+######################################################################
+@app.route("/promotions/reset", methods=["DELETE"])
+def reset_promotion():
+    """Reset all promotions (Behave background step)"""
+    Promotion.query.delete()
+    db.session.commit()
+    return "", status.HTTP_204_NO_CONTENT
