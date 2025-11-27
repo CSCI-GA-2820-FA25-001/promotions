@@ -25,11 +25,8 @@ import logging
 from datetime import datetime
 from flask import jsonify, request, url_for
 from flask import current_app as app
-from service.models import (
-    Promotion,
-    StatusEnum,
-)
 from service.common import status
+from service.models import Promotion, StatusEnum, db
 
 
 logger = logging.getLogger("flask.app")
@@ -284,7 +281,6 @@ def duplicate_promotion(promotion_id):
         {"Location": location_url},
     )
 
-
 ######################################################################
 # health end point
 ######################################################################
@@ -296,11 +292,10 @@ def health():
     return jsonify({"status": "OK"}), status.HTTP_200_OK
 
 
+
 ######################################################################
 # RESET DATABASE FOR BDD
 ######################################################################
-
-
 @app.route("/promotions/reset", methods=["DELETE"])
 def reset_promotion():
     """Reset all promotions (Behave background step)"""
