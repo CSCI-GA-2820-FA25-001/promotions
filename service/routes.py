@@ -30,7 +30,6 @@ from service.models import (
     StatusEnum,
 )
 from service.common import status
-from service.models import db
 
 
 logger = logging.getLogger("flask.app")
@@ -146,19 +145,20 @@ def update_promotion(promotion_id):
 @app.route("/promotions/<int:promotion_id>", methods=["DELETE"])
 def delete_promotion(promotion_id):
     """Delete a promotion"""
+
     promotion = Promotion.find(promotion_id)
     if not promotion:
-        # Idempotent delete — return 204 even if not found
         return "", status.HTTP_204_NO_CONTENT
 
-    # Check for active promotions before deleting
     if promotion.status == StatusEnum.active:
         return (
-            jsonify(error="Conflict", message="Cannot delete active promotion"),
-            status.HTTP_409_CONFLICT,
+            jsonify(
+                error="Conflict",
+                message="Cannot delete active promotion"
+            ),
+            status.HTTP_409_CONFLICT
         )
 
-    # Proceed with deletion
     promotion.delete()
     return "", status.HTTP_204_NO_CONTENT
 
@@ -284,6 +284,7 @@ def duplicate_promotion(promotion_id):
         {"Location": location_url},
     )
 
+
 ######################################################################
 # health end point
 ######################################################################
@@ -294,14 +295,15 @@ def health():
     """Health check endpoint for Kubernetes"""
     return jsonify({"status": "OK"}), status.HTTP_200_OK
 
+
 ######################################################################
-# RESET (for BDD test only)
+# RESET DATABASE FOR BDD
 ######################################################################
 
 
 @app.route("/promotions/reset", methods=["DELETE"])
 def reset_promotion():
-    """Reset the database for BDD tests"""
-    db.session.query(Promotion).delete()
+    """Reset all promotions (Behave background step)"""
+    Promotion.query.delete()
     db.session.commit()
-    return jsonify({"message": "Database reset"}), status.HTTP_200_OK
+    return "", status.HTTP_204_NO_CONTENT
