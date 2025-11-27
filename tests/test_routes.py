@@ -818,7 +818,6 @@ class TestYourResourceService(TestCase):
         assert resp.status_code == 200
         assert resp.get_json() == {"status": "OK"}
 
-
     def test_reset_promotions_endpoint(self):
         """It should reset all promotions (BDD helper endpoint)"""
         promo = PromotionFactory()
