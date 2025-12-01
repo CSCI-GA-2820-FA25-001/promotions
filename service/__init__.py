@@ -33,7 +33,9 @@ from service.common import log_handlers
 def create_app():
     """Initialize the core Flask application."""
     # Set static folder to root directory's static folder
-    app = Flask(__name__, static_folder="static", static_url_path="/static")  # pylint: disable=redefined-outer-name
+    app = Flask(  # pylint: disable=redefined-outer-name
+        __name__, static_folder="static", static_url_path="/static"
+    )  # pylint: disable=redefined-outer-name
     app.config.from_object(config)
 
     # ------------------------------------------------------------------
@@ -82,7 +84,9 @@ from service import routes  # noqa: F401 pylint: disable=wrong-import-position
 # ----------------------------------------------------------------------
 # Trigger logger and handler registration explicitly (for test coverage)
 # ----------------------------------------------------------------------
-from service.common import error_handlers  # noqa: E402 pylint: disable=wrong-import-position
+from service.common import (
+    error_handlers,
+)  # noqa: E402 pylint: disable=wrong-import-position
 
 
 def _init_logging_and_handlers():
