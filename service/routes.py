@@ -61,26 +61,6 @@ def index():
 
 
 ######################################################################
-# Authorization Decorator
-######################################################################
-def token_required(func):
-    """Decorator to require a token for this endpoint"""
-
-    @wraps(func)
-    def decorated(*args, **kwargs):
-        token = None
-        if "X-Api-Key" in request.headers:
-            token = request.headers["X-Api-Key"]
-
-        if app.config.get("API_KEY") and app.config["API_KEY"] == token:
-            return func(*args, **kwargs)
-
-        return {"message": "Invalid or missing token"}, 401
-
-    return decorated
-
-
-######################################################################
 # CREATE / GET ALL
 ######################################################################
 @api.route("/promotions")
