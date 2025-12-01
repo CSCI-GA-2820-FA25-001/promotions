@@ -474,12 +474,8 @@ class TestYourResourceService(TestCase):
 
     def test_data_validation_error_handler_direct(self):
         """It should trigger the DataValidationError handler directly"""
-        from service.models import (
-            DataValidationError,
-        )  # pylint: disable=import-outside-toplevel
-        from service.common import (
-            error_handlers,
-        )  # pylint: disable=import-outside-toplevel
+        from service.models import DataValidationError  # pylint: disable=import-outside-toplevel
+        from service.common import error_handlers  # pylint: disable=import-outside-toplevel
 
         with app.app_context():
             err = DataValidationError("manual validation fail")
