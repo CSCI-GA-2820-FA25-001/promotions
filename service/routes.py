@@ -306,6 +306,7 @@ class PromotionReset(Resource):
 
     @api.doc("reset_promotions")
     def delete(self):
+        """DELETE the target"""
         Promotion.query.delete()
         db.session.commit()
         return "", status.HTTP_204_NO_CONTENT
@@ -316,5 +317,8 @@ class PromotionReset(Resource):
 ######################################################################
 @api.route("/health")
 class Health(Resource):
+    """ Health /api.health"""
+    
     def get(self):
+        """Test Health"""
         return {"status": "OK"}, status.HTTP_200_OK
