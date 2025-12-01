@@ -84,7 +84,7 @@ $(document).ready(function () {
 
         let ajax = $.ajax({
             type: "POST",
-            url: "/promotions",
+            url: "/api/promotions",
             contentType: "application/json",
             data: JSON.stringify(data),
         });
@@ -141,7 +141,7 @@ $(document).ready(function () {
 
         let ajax = $.ajax({
             type: "PUT",
-            url: `/promotions/${promotion_id}`,
+            url: `/api/promotions/${promotion_id}`,
             contentType: "application/json",
             data: JSON.stringify(data)
         });
@@ -167,7 +167,7 @@ $(document).ready(function () {
 
         let ajax = $.ajax({
             type: "GET",
-            url: `/promotions/${promotion_id}`,
+            url: `/api/promotions/${promotion_id}`,
             contentType: "application/json",
             data: ''
         });
@@ -194,7 +194,7 @@ $(document).ready(function () {
 
         let ajax = $.ajax({
             type: "DELETE",
-            url: `/promotions/${promotion_id}`,
+            url: `/api/promotions/${promotion_id}`,
             contentType: "application/json",
             data: '',
         });
@@ -235,7 +235,7 @@ $(document).ready(function () {
 
         let ajax = $.ajax({
             type: "GET",
-            url: `/promotions?${queryString}`,
+            url: `/api/promotions?${queryString}`,
             contentType: "application/json",
             data: ''
         });
