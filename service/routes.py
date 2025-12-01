@@ -26,7 +26,6 @@ RESTX version of Promotions API routes
 
 import logging
 from datetime import datetime
-from functools import wraps
 from flask import request
 from flask import current_app as app
 from flask_restx import Resource
