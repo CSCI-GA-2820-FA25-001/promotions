@@ -405,9 +405,7 @@ class TestYourResourceService(TestCase):
     ######################################################################
     # EXTRA TESTS — error_handlers
     ######################################################################
-    from flask import (
-        current_app as app,
-    )  # pylint: disable=import-outside-toplevel,shadowed-import
+    from flask import current_app as app  # pylint: disable=import-outside-toplevel,shadowed-import
 
     def test_not_found_error_handler(self):
         """It should handle 404 Not Found errors in JSON"""
@@ -419,12 +417,8 @@ class TestYourResourceService(TestCase):
 
     def test_internal_server_error_handler(self):
         """It should handle 500 Internal Server Error gracefully"""
-        from service.common import (
-            error_handlers,
-        )  # pylint: disable=import-outside-toplevel
-        from werkzeug.exceptions import (
-            InternalServerError,
-        )  # pylint: disable=import-outside-toplevel
+        from service.common import error_handlers  # pylint: disable=import-outside-toplevel
+        from werkzeug.exceptions import InternalServerError  # pylint: disable=import-outside-toplevel
 
         # simulate a real 500 error without adding new route
         with app.app_context():
@@ -439,15 +433,9 @@ class TestYourResourceService(TestCase):
 
     def test_error_handlers_explicit_calls(self):
         """It should directly trigger each error handler"""
-        from service.models import (
-            DataValidationError,
-        )  # pylint: disable=import-outside-toplevel
-        from service.common import (
-            error_handlers,
-        )  # pylint: disable=import-outside-toplevel
-        from werkzeug.exceptions import (
-            UnsupportedMediaType,
-        )  # pylint: disable=import-outside-toplevel
+        from service.models import DataValidationError  # pylint: disable=import-outside-toplevel
+        from service.common import error_handlers  # pylint: disable=import-outside-toplevel
+        from werkzeug.exceptions import UnsupportedMediaType  # pylint: disable=import-outside-toplevel
 
         with app.app_context():
             # 400 Bad Request
