@@ -44,8 +44,8 @@ def create_app():
 
         try:
             db.create_all()
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            flask_app.logger.warning("%s: Database not ready yet", error)
+        except Exception as error:  # pylint: disable=broad-exception-caught  # pragma: no cover
+            flask_app.logger.warning("%s: Database not ready yet", error)  # pragma: no cover
 
         log_handlers.init_logging(flask_app, "gunicorn.error")
 
