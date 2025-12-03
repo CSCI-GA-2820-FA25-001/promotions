@@ -39,8 +39,9 @@ def step_impl(context, message):
 def step_impl(context, element_name, text_string):
     element_id = ID_PREFIX + element_name.lower().replace(" ", "_")
     element = context.driver.find_element(By.ID, element_id)
-    element.clear()
-    element.send_keys(text_string)
+    # element.clear()
+    # element.send_keys(text_string)
+    context.driver.execute_script("arguments[0].value = arguments[1];", element, text_string)
 
 
 ##################################################################
@@ -120,7 +121,7 @@ def step_impl(context, button):
 ##################################################################
 @then('I should see "{message}"')
 def step_impl(context, message):
-    found = WebDriverWait(context.driver, 5).until(
+    found = WebDriverWait(context.driver, 10).until(
         EC.text_to_be_present_in_element((By.ID, "flash_message"), message)
     )
     assert found

@@ -3,7 +3,7 @@ import requests
 import json
 from urllib.parse import urljoin
 
-BASE_URL = "http://localhost:8080"
+BASE_URL = "http://localhost:8080/api"
 
 ######################################################################
 # Reset DB
