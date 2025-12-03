@@ -1,92 +1,86 @@
 ######################################################################
-# Copyright 2016, 2024 John J. Rofrano. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright 2016, 2024 John J. Rofrano
 ######################################################################
-
-######################################################################
-# Copyright 2016, 2024 John J. Rofrano. All Rights Reserved.
-######################################################################
-
 
 """
-RESTX version of Promotions API routes
+RESTX version of Promotions API routes.
+This module defines all API endpoints for managing promotions.
 """
-
 
 import logging
 from datetime import datetime
 from flask import request
 from flask import current_app as app
-from flask_restx import Resource
-from flask_restx import Api
+from flask_restx import Resource, Api
 from service.models import Promotion, StatusEnum, db
 from service.common import status
 
 
-# Document the type of authorization required
-authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "X-Api-Key"}}
+logger = logging.getLogger("flask.app")
+
+
+######################################################################
+# Helper Functions
+######################################################################
+def error_response(error: str, message: str, code: int):
+    """Return a standardized error response dictionary."""
+    return {"error": error, "message": message}, code
+
+
+######################################################################
+# Swagger & RESTX API Initialization
+######################################################################
+authorizations = {
+    "apikey": {"type": "apiKey", "in": "header", "name": "X-Role"}
+}
 
 api = Api(
     app,
     version="1.0",
     title="Promotions API",
     description="RESTX API for Promotions Service",
-    doc="/apidocs",  # default also could use doc='/apidocs/'
+    doc="/apidocs",
     authorizations=authorizations,
     prefix="/api",
 )
-logger = logging.getLogger("flask.app")
 
 
 ######################################################################
-# INDEX
+# Index Route
 ######################################################################
 @app.route("/", methods=["GET"])
 def index():
-    """Root URL for the Promotions microservice"""
+    """Serve the home page for the service."""
     logger.info("Root URL accessed.")
     return app.send_static_file("index.html")
 
 
 ######################################################################
-# CREATE / GET ALL
+# Promotions Collection
 ######################################################################
 @api.route("/promotions")
 class PromotionCollection(Resource):
-    """Handles /api/promotions"""
+    """Handles operations on the promotions collection."""
 
     @api.doc("list_promotions")
     def get(self):
-        """List promotions with role, keyword, and date filters"""
-        role = (
-            request.headers.get("X-Role") or request.args.get("role", "customer")
-        ).lower()
-        start_date_str = request.args.get("start_date")
-        end_date_str = request.args.get("end_date")
-        keyword = request.args.get("q") or request.args.get("keyword")
-
-        # auto expire
+        """List promotions with filtering by role, keyword, and date."""
+        # -------- Auto-expire promotions --------
         expired = Promotion.query.filter(
             Promotion.expiration_date < datetime.now(),
             Promotion.status == StatusEnum.active,
         ).all()
+
         for pro in expired:
             pro.status = StatusEnum.expired
             pro.update()
 
+        # -------- Role filter --------
+        role = request.args.get("role", "customer").lower()
         if role == "customer":
-            query = Promotion.query.filter(Promotion.status == StatusEnum.active)
+            query = Promotion.query.filter(
+                Promotion.status == StatusEnum.active
+            )
         elif role == "supplier":
             query = Promotion.query.filter(
                 Promotion.status.in_([StatusEnum.active, StatusEnum.expired])
@@ -94,61 +88,68 @@ class PromotionCollection(Resource):
         elif role == "manager":
             query = Promotion.query
         else:
-            return (
-                {"error": "Bad Request", "message": "Invalid role value"},
+            return error_response(
+                "Bad Request",
+                "Invalid role value",
                 status.HTTP_400_BAD_REQUEST,
             )
 
+        # -------- Keyword filter --------
+        keyword = request.args.get("q") or request.args.get("keyword")
         if keyword:
-            like = f"%{keyword}%"
+            like_expr = f"%{keyword}%"
             query = query.filter(
-                (Promotion.product_name.ilike(like))
-                | (Promotion.description.ilike(like))
+                Promotion.product_name.ilike(like_expr)
+                | Promotion.description.ilike(like_expr)
             )
 
-        try:
-            if start_date_str and end_date_str:
+        # -------- Date filter --------
+        start_date_str = request.args.get("start_date")
+        end_date_str = request.args.get("end_date")
+
+        if start_date_str and end_date_str:
+            try:
                 start_date = datetime.fromisoformat(
                     start_date_str.replace("Z", "+00:00")
                 )
-                end_date = datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
+                end_date = datetime.fromisoformat(
+                    end_date_str.replace("Z", "+00:00")
+                )
                 query = query.filter(
                     Promotion.start_date >= start_date,
                     Promotion.expiration_date <= end_date,
                 )
-        except ValueError:
-            return (
-                {"error": "Bad Request", "message": "Invalid date format"},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            except ValueError:
+                return error_response(
+                    "Bad Request",
+                    "Invalid date format",
+                    status.HTTP_400_BAD_REQUEST,
+                )
 
-        result = [p.serialize() for p in query.all()]
-        return result, status.HTTP_200_OK
+        results = [p.serialize() for p in query.all()]
+        return results, status.HTTP_200_OK
 
     @api.doc("create_promotion")
-    # @api.expect(promotion_model)
     def post(self):
-        """Create a new promotion"""
+        """Create a new promotion."""
         if not request.is_json:
-            return (
-                {
-                    "error": "Unsupported Media Type",
-                    "message": "Content-Type must be application/json",
-                },
+            return error_response(
+                "Unsupported Media Type",
+                "Content-Type must be application/json",
                 status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             )
 
         promotion, error_code, error_type, error_message = (
-            Promotion.create_promotion_with_error_handling(request.get_json())
+            Promotion.create_promotion_with_error_handling(
+                request.get_json()
+            )
         )
 
         if error_code:
-            return {"error": error_type, "message": error_message}, error_code
+            return error_response(error_type, error_message, error_code)
 
         location_url = api.url_for(
-            PromotionResource,
-            promotion_id=promotion.id,
-            _external=True,
+            PromotionResource, promotion_id=promotion.id, _external=True
         )
 
         return (
@@ -159,37 +160,32 @@ class PromotionCollection(Resource):
 
 
 ######################################################################
-# READ / UPDATE / DELETE
+# Promotion Resource
 ######################################################################
 @api.route("/promotions/<int:promotion_id>")
 @api.response(404, "Promotion not found")
 class PromotionResource(Resource):
-    """Handles /api/promotions/<promotion_id>"""
+    """Handles CRUD operations on a specific promotion."""
 
     @api.doc("get_promotion")
     def get(self, promotion_id):
-        """Retrieve a single promotion"""
+        """Retrieve a promotion by ID."""
         promotion = Promotion.find(promotion_id)
         if not promotion:
-            return (
-                {
-                    "error": "Not Found",
-                    "message": f"Promotion with id '{promotion_id}' was not found.",
-                },
+            return error_response(
+                "Not Found",
+                f"Promotion with id '{promotion_id}' was not found.",
                 status.HTTP_404_NOT_FOUND,
             )
         return promotion.serialize(), status.HTTP_200_OK
 
     @api.doc("update_promotion")
-    # @api.expect(promotion_model)
     def put(self, promotion_id):
-        """Update a promotion"""
+        """Update an existing promotion."""
         if not request.is_json:
-            return (
-                {
-                    "error": "Unsupported Media Type",
-                    "message": "Content-Type must be application/json",
-                },
+            return error_response(
+                "Unsupported Media Type",
+                "Content-Type must be application/json",
                 status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             )
 
@@ -200,21 +196,22 @@ class PromotionResource(Resource):
         )
 
         if error_code:
-            return {"error": error_type, "message": error_message}, error_code
+            return error_response(error_type, error_message, error_code)
 
         return promotion.serialize(), status.HTTP_200_OK
 
     @api.doc("delete_promotion")
     def delete(self, promotion_id):
-        """Delete a promotion"""
+        """Delete a promotion if it is not active."""
         promotion = Promotion.find(promotion_id)
 
         if not promotion:
             return "", status.HTTP_204_NO_CONTENT
 
         if promotion.status == StatusEnum.active:
-            return (
-                {"error": "Conflict", "message": "Cannot delete active promotion"},
+            return error_response(
+                "Conflict",
+                "Cannot delete active promotion",
                 status.HTTP_409_CONFLICT,
             )
 
@@ -223,52 +220,55 @@ class PromotionResource(Resource):
 
 
 ######################################################################
-# DUPLICATE ACTION
+# Duplicate Promotion
 ######################################################################
 @api.route("/promotions/<int:promotion_id>/duplicate")
 class PromotionDuplicate(Resource):
-    """POST /api/promotions/<id>/duplicate"""
+    """Duplicate an existing promotion with optional overrides."""
 
     @api.doc("duplicate_promotion")
     def post(self, promotion_id):
-        """Duplicate an existing promotion (Action)"""
+        """Duplicate a promotion after permission & data validation."""
+        # -------- Authentication --------
         role = request.headers.get("X-Role")
         if not role:
-            return (
-                {"error": "Unauthorized", "message": "Authentication required"},
+            return error_response(
+                "Unauthorized",
+                "Authentication required",
                 status.HTTP_401_UNAUTHORIZED,
             )
 
         if role.lower() != "administrator":
-            return (
-                {
-                    "error": "Forbidden",
-                    "message": "Administrator privileges required to duplicate promotions",
-                },
+            return error_response(
+                "Forbidden",
+                "Administrator privileges required to duplicate promotions",
                 status.HTTP_403_FORBIDDEN,
             )
 
+        # -------- Content-Type --------
         if not request.is_json:
-            return (
-                {
-                    "error": "Unsupported Media Type",
-                    "message": "Content-Type must be application/json",
-                },
+            return error_response(
+                "Unsupported Media Type",
+                "Content-Type must be application/json",
                 status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             )
 
+        # -------- Duplicate --------
         new_promotion, error_code, error_type, error_message = (
-            Promotion.duplicate_promotion_with_error_handling(promotion_id)
+            Promotion.duplicate_promotion_with_error_handling(
+                promotion_id, request.get_json()
+            )
         )
 
         if error_code:
-            return {"error": error_type, "message": error_message}, error_code
+            return error_response(error_type, error_message, error_code)
 
         location_url = api.url_for(
             PromotionResource,
             promotion_id=new_promotion.id,
             _external=True,
         )
+
         return (
             new_promotion.serialize(),
             status.HTTP_201_CREATED,
@@ -277,27 +277,27 @@ class PromotionDuplicate(Resource):
 
 
 ######################################################################
-# RESET DATABASE (BDD)
+# Reset Database (BDD Test Helper)
 ######################################################################
 @api.route("/promotions/reset")
 class PromotionReset(Resource):
-    """DELETE /api/promotions/reset"""
+    """Reset all promotions (used for BDD tests)."""
 
     @api.doc("reset_promotions")
     def delete(self):
-        """DELETE the target"""
+        """Delete all promotions in the database."""
         Promotion.query.delete()
         db.session.commit()
         return "", status.HTTP_204_NO_CONTENT
 
 
 ######################################################################
-# HEALTH CHECK
+# Health Endpoint
 ######################################################################
 @api.route("/health")
 class Health(Resource):
-    """ Health /api.health"""
+    """Health check endpoint."""
 
     def get(self):
-        """Test Health"""
+        """Return service health status."""
         return {"status": "OK"}, status.HTTP_200_OK
