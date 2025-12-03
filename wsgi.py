@@ -1,8 +1,11 @@
 """
-Web Server Gateway Interface (WSGI) entry point
+Web Server Gateway Interface (WSGI) entry point.
+Creates the Flask app using the factory pattern.
 """
 
-from service import app
+from service import create_app
+
+app = create_app()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)

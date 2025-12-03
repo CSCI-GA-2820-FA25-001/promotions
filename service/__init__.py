@@ -16,8 +16,8 @@
 
 """
 Package: service
-This module creates the Flask app, initializes the database,
-registers routes, and sets up logging for the Promotions service.
+This module creates and configures the Flask app and sets up the logging
+and SQL database
 """
 
 from flask import Flask
@@ -26,48 +26,32 @@ from service.common import log_handlers
 
 
 def create_app():
-    """Initialize and configure the Flask application."""
-    app = Flask(__name__, static_folder="static", static_url_path="/static")
-    app.config.from_object(config)
+    """Create and configure the Flask application."""
+    # pylint: disable=import-outside-toplevel
 
-    # Disable strict slashes (required by tests)
-    app.url_map.strict_slashes = False
+    flask_app = Flask(__name__)
+    flask_app.config.from_object(config)
 
-    # Initialize database
-    from service.models import db  # noqa: E402
-    db.init_app(app)
+    flask_app.url_map.strict_slashes = False
 
-    with app.app_context():
-        # Import routes AFTER app is created
-        from service import routes  # noqa: F401,E402
-        from service.common import error_handlers  # noqa: F401,E402
+    # ---- Database setup ----
+    from service.models import db
+    db.init_app(flask_app)
 
-        # Create DB tables
+    with flask_app.app_context():
+        from service import routes  # pylint: disable=unused-import
+        from service.common import error_handlers  # pylint: disable=unused-import
+
         try:
             db.create_all()
-        except Exception as error:  # noqa: BLE001
-            app.logger.warning("Database not ready: %s", error)
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            flask_app.logger.warning("%s: Database not ready yet", error)
 
-        # Setup logging
-        log_handlers.init_logging(app, "gunicorn.error")
+        log_handlers.init_logging(flask_app, "gunicorn.error")
 
-        app.logger.info(70 * "*")
-        app.logger.info(" PROMOTION SERVICE RUNNING ".center(70, "*"))
-        app.logger.info(70 * "*")
-        app.logger.info("Service initialized!")
+        flask_app.logger.info(70 * "*")
+        flask_app.logger.info("PROMOTION SERVICE RUNNING".center(70, "*"))
+        flask_app.logger.info(70 * "*")
+        flask_app.logger.info("Service initialized!")
 
-    return app
-
-
-# Create the Flask application instance
-app = create_app()
-
-
-def _init_logging_and_handlers():
-    """Register error handlers explicitly for testing."""
-    from service.common import error_handlers  # noqa: E402
-    error_handlers.register_handlers(app)
-    app.logger.info("Handlers registered.")
-
-
-_init_logging_and_handlers()
+    return flask_app
