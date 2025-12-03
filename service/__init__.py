@@ -16,81 +16,58 @@
 
 """
 Package: service
-This module creates and configures the Flask app and sets up the logging
-and SQL database
+This module creates the Flask app, initializes the database,
+registers routes, and sets up logging for the Promotions service.
 """
 
-import os
-import sys
 from flask import Flask
 from service import config
 from service.common import log_handlers
 
 
-######################################################################
-# Initialize the Flask instance
-######################################################################
 def create_app():
-    """Initialize the core Flask application."""
-    # Set static folder to root directory's static folder
-    app = Flask(  # pylint: disable=redefined-outer-name
-        __name__, static_folder="static", static_url_path="/static"
-    )  # pylint: disable=redefined-outer-name
+    """Initialize and configure the Flask application."""
+    app = Flask(__name__, static_folder="static", static_url_path="/static")
     app.config.from_object(config)
 
-    # ------------------------------------------------------------------
-    # Initialize database
-    # ------------------------------------------------------------------
-    from service.models import db  # pylint: disable=import-outside-toplevel
+    # Disable strict slashes (required by tests)
+    app.url_map.strict_slashes = False
 
+    # Initialize database
+    from service.models import db  # noqa: E402
     db.init_app(app)
 
-    # ------------------------------------------------------------------
-    # Register blueprints, routes, and CLI commands
-    # ------------------------------------------------------------------
     with app.app_context():
-        # pylint: disable=redefined-outer-name,import-outside-toplevel
-        # pylint: disable=reimported,unused-import
-        from service import routes, models  # noqa: F401, F811
-        from service.common import error_handlers, cli_commands  # noqa: F401
+        # Import routes AFTER app is created
+        from service import routes  # noqa: F401,E402
+        from service.common import error_handlers  # noqa: F401,E402
 
+        # Create DB tables
         try:
             db.create_all()
-        except Exception as error:  # pylint: disable=broad-except
-            app.logger.warning("%s: Database not ready yet", error)  # pragma: no cover
+        except Exception as error:  # noqa: BLE001
+            app.logger.warning("Database not ready: %s", error)
 
-        cli_commands.init_cli(app)
+        # Setup logging
+        log_handlers.init_logging(app, "gunicorn.error")
 
-    # ------------------------------------------------------------------
-    # Set up logging
-    # ------------------------------------------------------------------
-    log_handlers.init_logging(app, "gunicorn.error")
-
-    app.logger.info(70 * "*")
-    app.logger.info("  S E R V I C E   R U N N I N G  ".center(70, "*"))
-    app.logger.info(70 * "*")
-    app.logger.info("Service initialized!")
+        app.logger.info(70 * "*")
+        app.logger.info(" PROMOTION SERVICE RUNNING ".center(70, "*"))
+        app.logger.info(70 * "*")
+        app.logger.info("Service initialized!")
 
     return app
 
 
-# ----------------------------------------------------------------------
-# Create the Flask app instance
-# ----------------------------------------------------------------------
+# Create the Flask application instance
 app = create_app()
-
-from service import routes  # noqa: F401 pylint: disable=wrong-import-position
-
-# ----------------------------------------------------------------------
-# Trigger logger and handler registration explicitly (for test coverage)
-# ----------------------------------------------------------------------
-from service.common import error_handlers  # noqa: E402 pylint: disable=wrong-import-position
 
 
 def _init_logging_and_handlers():
-    """Ensure handlers and logger are initialized at import time."""
+    """Register error handlers explicitly for testing."""
+    from service.common import error_handlers  # noqa: E402
     error_handlers.register_handlers(app)
-    app.logger.info("Service initialized and handlers registered.")
+    app.logger.info("Handlers registered.")
 
 
 _init_logging_and_handlers()
