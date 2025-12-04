@@ -9,9 +9,10 @@ This module defines all API endpoints for managing promotions.
 
 import logging
 from datetime import datetime
-from flask import request
+from flask import jsonify, request
 from flask import current_app as app
 from flask_restx import Resource, Api
+from werkzeug.exceptions import NotFound, BadRequest, MethodNotAllowed, UnsupportedMediaType, InternalServerError
 from service.models import Promotion, StatusEnum, db
 from service.common import status
 
@@ -42,7 +43,43 @@ api = Api(
     doc="/apidocs",
     authorizations=authorizations,
     prefix="/api",
+    default="Promotions",
+    default_label="Promotions API operations"
 )
+
+
+######################################################################
+# RESTX JSON Error Handlers (replaces HTML error handlers)
+######################################################################
+@api.errorhandler(NotFound)
+def handle_not_found(error):
+    """Handle 404 errors with JSON response"""
+    return {"error": "Not Found", "message": str(error)}, 404
+
+
+@api.errorhandler(BadRequest)
+def handle_bad_request(error):
+    """Handle 400 errors with JSON response"""
+    return {"error": "Bad Request", "message": str(error)}, 400
+
+
+@api.errorhandler(MethodNotAllowed)
+def handle_method_not_allowed(error):
+    """Handle 405 errors with JSON response"""
+    return {"error": "Method not Allowed", "message": str(error)}, 405
+
+
+@api.errorhandler(UnsupportedMediaType)
+def handle_unsupported_media_type(error):
+    """Handle 415 errors with JSON response"""
+    return {"error": "Unsupported Media Type", "message": str(error)}, 415
+
+
+@api.errorhandler(InternalServerError)
+def handle_internal_server_error(error):
+    """Handle 500 errors with JSON response"""
+    logger.error("Internal Server Error: %s", error)
+    return {"error": "Internal Server Error", "message": str(error)}, 500
 
 
 ######################################################################
@@ -50,9 +87,17 @@ api = Api(
 ######################################################################
 @app.route("/", methods=["GET"])
 def index():
-    """Serve the home page for the service."""
+    """Root URL for the Promotions microservice"""
     logger.info("Root URL accessed.")
-    return app.send_static_file("index.html")
+    # Construct the list URL manually to avoid RESTX endpoint name issues
+    base_url = request.url_root.rstrip("/")
+    response = {
+        "service": "Promotions REST API Service",
+        "version": "1.0",
+        "description": "This service allows CRUD operations on promotions",
+        "list_url": f"{base_url}/api/promotions",
+    }
+    return jsonify(response), status.HTTP_200_OK
 
 
 ######################################################################

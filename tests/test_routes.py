@@ -84,6 +84,11 @@ class TestYourResourceService(TestCase):
         """It should call the Home Page"""
         response = self.client.get("/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["service"], "Promotions REST API Service")
+        self.assertEqual(data["version"], "1.0")
+        self.assertIn("list_url", data)
+        self.assertIn("/api/promotions", data["list_url"])
 
     ######################################################################
     #  C R E A T E   T E S T S
@@ -834,3 +839,42 @@ class TestYourResourceService(TestCase):
         resp = self.client.get(f"{BASE_URL}")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.get_json(), [])
+
+    ######################################################################
+    # RESTX ERROR HANDLER TESTS
+    ######################################################################
+    def test_restx_not_found_error_handler(self):
+        """Test RESTX 404 error handler returns JSON"""
+        from service import routes  # pylint: disable=import-outside-toplevel
+        from werkzeug.exceptions import NotFound  # pylint: disable=import-outside-toplevel
+
+        # Directly test the RESTX error handler
+        err = NotFound("Resource not found")
+        error_dict, status_code = routes.handle_not_found(err)
+        self.assertEqual(status_code, 404)
+        self.assertEqual(error_dict["error"], "Not Found")
+        self.assertIn("message", error_dict)
+
+    def test_restx_unsupported_media_type_error_handler(self):
+        """Test RESTX 415 error handler returns JSON"""
+        from service import routes  # pylint: disable=import-outside-toplevel
+        from werkzeug.exceptions import UnsupportedMediaType  # pylint: disable=import-outside-toplevel
+
+        # Directly test the RESTX error handler
+        err = UnsupportedMediaType("Unsupported media type")
+        error_dict, status_code = routes.handle_unsupported_media_type(err)
+        self.assertEqual(status_code, 415)
+        self.assertEqual(error_dict["error"], "Unsupported Media Type")
+        self.assertIn("message", error_dict)
+
+    def test_restx_internal_server_error_handler(self):
+        """Test RESTX 500 error handler returns JSON"""
+        from service import routes  # pylint: disable=import-outside-toplevel
+        from werkzeug.exceptions import InternalServerError  # pylint: disable=import-outside-toplevel
+
+        # Directly test the RESTX error handler
+        err = InternalServerError("Internal server error")
+        error_dict, status_code = routes.handle_internal_server_error(err)
+        self.assertEqual(status_code, 500)
+        self.assertEqual(error_dict["error"], "Internal Server Error")
+        self.assertIn("message", error_dict)
