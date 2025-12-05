@@ -1,0 +1,65 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: cd-pipeline
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/displayName: "CD Pipeline"
+spec:
+  workspaces:
+    - name: shared-workspace
+
+  tasks:
+    - name: clone
+      taskRef:
+        name: clone
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: lint
+      taskRef:
+        name: lint
+      runAfter:
+        - clone
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: test
+      taskRef:
+        name: test
+      runAfter:
+        - clone
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build
+      taskRef:
+        name: build
+      runAfter:
+        - lint
+        - test
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: deploy
+      taskRef:
+        name: deploy
+      runAfter:
+        - build
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: bdd
+      taskRef:
+        name: bdd
+      runAfter:
+        - deploy
+      workspaces:
+        - name: source
+          workspace: shared-workspace
