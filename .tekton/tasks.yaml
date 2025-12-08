@@ -197,9 +197,39 @@ spec:
           oc apply -f $(inputs.params.manifest-dir)/service.yaml
 
           echo "************************************************************"
-          sleep 3
+          echo "Creating Route for external access..."
+          
+          # Check if route already exists, if not create it
+          if oc get route promotions &> /dev/null; then
+            echo "Route already exists"
+          else
+            echo "Creating new route..."
+            oc create route edge promotions --service=promotions --port=8080
+          fi
+          
+          # Wait for deployment to be ready
+          echo "Waiting for deployment..."
+          oc rollout status deployment/promotions --timeout=5m
+          
+          echo "************************************************************"
           echo "Pods:"
-          oc get pods
+          oc get pods -l app=promotions
+          echo ""
+          
+          echo "************************************************************"
+          echo " Deployment Complete!"
+          echo "======================================"
+          
+          # Get and display the accessible BASE_URL
+          ROUTE_HOST=$(oc get route promotions -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
+          if [ ! -z "$ROUTE_HOST" ]; then
+            echo "BASE_URL: https://$ROUTE_HOST"
+          else
+            echo "BASE_URL: http://promotions.localdev.me (local)"
+          fi
+          
+          echo "======================================"
+          echo "Route is accessible externally!"
           echo ""
 
 ---
