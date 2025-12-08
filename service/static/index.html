@@ -12,6 +12,7 @@
 
       <div class="page-header">
         <h1>Promotions Management</h1>
+        <p>API Documentation is <a href="/apidocs">here</a>.</p>
       </div>
 
       <!-- Flash Message -->
@@ -24,13 +25,13 @@
         <!-- ID -->
         <div class="form-group">
           <label for="promotions_id">ID</label>
-          <input type="text" id="promotions_id" class="form-control">
+          <input type="text" id="promotions_id" class="form-control" required>
         </div>
 
         <!-- Product Name -->
         <div class="form-group">
           <label for="promotions_product_name">Product Name</label>
-          <input type="text" id="promotions_product_name" class="form-control">
+          <input type="text" id="promotions_product_name" class="form-control" required>
         </div>
 
         <!-- Description -->
@@ -42,7 +43,7 @@
         <!-- Original Price -->
         <div class="form-group">
           <label for="promotions_original_price">Original Price</label>
-          <input type="number" step="0.01" id="promotions_original_price" class="form-control">
+          <input type="number" step="0.01" id="promotions_original_price" class="form-control" required>
         </div>
 
         <!-- Discount Value -->
@@ -64,7 +65,7 @@
         <!-- Promotion Type -->
         <div class="form-group">
           <label for="promotions_promotion_type">Promotion Type</label>
-          <select id="promotions_promotion_type" class="form-control">
+          <select id="promotions_promotion_type" class="form-control" required>
             <option value="discount">Discount</option>
             <option value="other">Other</option>
           </select>
@@ -73,7 +74,7 @@
         <!-- Status -->
         <div class="form-group">
           <label for="promotions_status">Status</label>
-          <select id="promotions_status" class="form-control">
+          <select id="promotions_status" class="form-control" required>
             <option value="draft">Draft</option>
             <option value="active">Active</option>
             <option value="expired">Expired</option>
@@ -85,7 +86,7 @@
         <!-- Expiration Date -->
         <div class="form-group">
           <label for="promotions_expiration_date">Expiration Date</label>
-          <input type="datetime-local" id="promotions_expiration_date" class="form-control">
+          <input type="datetime-local" id="promotions_expiration_date" class="form-control" required>
         </div>
 
         <!-- Buttons -->
@@ -95,6 +96,7 @@
           <button class="btn btn-warning" id="update-btn">Update</button>
           <button class="btn btn-danger" id="delete-btn">Delete</button>
           <button class="btn btn-success" id="search-btn">Search</button>
+          <button class="btn btn-info" id="list-all-btn">List All</button>
           <button class="btn btn-default" id="clear-btn">Clear</button>
         </div>
 
@@ -114,6 +116,7 @@
             <th>Promotion Type</th>
             <th>Status</th>
             <th>Expiration</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="results-body"></tbody>

@@ -115,6 +115,28 @@ def step_impl(context, button):
     button_id = button.lower().replace(" ", "_") + "-btn"
     context.driver.find_element(By.ID, button_id).click()
 
+@when('I press the "Duplicate" button for "{product_name}"')
+def step_impl(context, product_name):
+    table = context.driver.find_element(By.ID, "search_results")
+    tbody = table.find_element(By.TAG_NAME, "tbody")
+    rows = tbody.find_elements(By.TAG_NAME, "tr")
+
+    target_row = None
+    for row in rows:
+        cells = row.find_elements(By.TAG_NAME, "td")
+        if not cells:
+            continue
+        # Product Name is in the 2nd column
+        if cells[1].text.strip() == product_name:
+            target_row = row
+            break
+
+    assert target_row is not None, f'Row for product "{product_name}" not found in results'
+
+    duplicate_button = target_row.find_element(By.CSS_SELECTOR, ".duplicate-btn")
+    duplicate_button.click()
+
+
 
 ##################################################################
 # Flash Message

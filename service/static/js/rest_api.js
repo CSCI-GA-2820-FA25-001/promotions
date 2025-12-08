@@ -44,11 +44,31 @@ $(document).ready(function () {
         }
     }
 
+    function validate_required_fields() {
+        let required_fields = [
+            "#promotions_product_name",
+            "#promotions_original_price",
+            "#promotions_promotion_type",
+            "#promotions_status",
+            "#promotions_expiration_date"
+        ];
+    
+        for (let field of required_fields) {
+            if (!$(field).val()) {
+                flash_message("Please fill out all required fields.");
+                return false;
+            }
+        }
+        return true;
+    }
+
     // ****************************************
     // Create a Promotion
     // ****************************************
 
     $("#create-btn").click(function () {
+
+        if (!validate_required_fields()) return;
 
         let product_name = $("#promotions_product_name").val();
         let description = $("#promotions_description").val();
@@ -105,6 +125,8 @@ $(document).ready(function () {
     // ****************************************
 
     $("#update-btn").click(function () {
+
+        if (!validate_required_fields()) return;
 
         let promotion_id = $("#promotions_id").val();
         let product_name = $("#promotions_product_name").val();
@@ -205,7 +227,11 @@ $(document).ready(function () {
         });
 
         ajax.fail(function(res){
-            flash_message("Server error!");
+            if (res.responseJSON && res.responseJSON.message) {
+                flash_message(res.responseJSON.message);
+            } else {
+                flash_message("Server error!");
+            }
         });
     });
 
@@ -223,60 +249,125 @@ $(document).ready(function () {
     // ****************************************
 
     $("#search-btn").click(function () {
-
         let product_name = $("#promotions_product_name").val();
         let queryString = "role=manager";
-
+    
         if (product_name) {
-            queryString += '&q=' + product_name;
+            queryString += "&q=" + encodeURIComponent(product_name);
         }
-
+    
         $("#flash_message").empty();
-
+    
         let ajax = $.ajax({
             type: "GET",
             url: `/api/promotions?${queryString}`,
             contentType: "application/json",
-            data: ''
+            data: ""
         });
-
+    
         ajax.done(function(res){
-            $("#search_results").empty();
-            let table = '<table class="table table-striped" cellpadding="10">';
-            table += '<thead><tr>';
-            table += '<th>ID</th>';
-            table += '<th>Product Name</th>';
-            table += '<th>Description</th>';
-            table += '<th>Original Price</th>';
-            table += '<th>Discount Value</th>';
-            table += '<th>Discount Type</th>';
-            table += '<th>Promotion Type</th>';
-            table += '<th>Status</th>';
-            table += '<th>Expiration</th>';
-            table += '</tr></thead><tbody id="results-body">';
-
+            // Use the SAME table: just clear tbody
+            $("#results-body").empty();
+    
             let firstPromotion = null;
-            for(let i = 0; i < res.length; i++) {
+    
+            for (let i = 0; i < res.length; i++) {
                 let promotion = res[i];
-                let expiration = promotion.expiration_date ? new Date(promotion.expiration_date).toLocaleString() : '';
-                table += `<tr id="row_${i}">
-                    <td>${promotion.id}</td>
-                    <td>${promotion.product_name}</td>
-                    <td>${promotion.description || ''}</td>
-                    <td>${promotion.original_price}</td>
-                    <td>${promotion.discount_value || ''}</td>
-                    <td>${promotion.discount_type || ''}</td>
-                    <td>${promotion.promotion_type}</td>
-                    <td>${promotion.status}</td>
-                    <td>${expiration}</td>
-                </tr>`;
-                if (i == 0) {
+                let expiration = promotion.expiration_date
+                    ? new Date(promotion.expiration_date).toLocaleString()
+                    : "";
+    
+                let row = `
+                    <tr id="row_${i}">
+                        <td>${promotion.id}</td>
+                        <td>${promotion.product_name}</td>
+                        <td>${promotion.description || ""}</td>
+                        <td>${promotion.original_price}</td>
+                        <td>${promotion.discount_value || ""}</td>
+                        <td>${promotion.discount_type || ""}</td>
+                        <td>${promotion.promotion_type}</td>
+                        <td>${promotion.status}</td>
+                        <td>${expiration}</td>
+                        <td>
+                            <button class="btn btn-default btn-sm duplicate-btn"
+                                    data-id="${promotion.id}">
+                                Duplicate
+                            </button>
+                        </td>
+                    </tr>
+                `;
+    
+                $("#results-body").append(row);
+    
+                if (i === 0) {
                     firstPromotion = promotion;
                 }
             }
+    
+            if (firstPromotion) {
+                update_form_data(firstPromotion);
+            }
+    
+            flash_message("Success");
+        });
+    
+        ajax.fail(function(res){
+            flash_message(res.responseJSON.message);
+        });
+    });
 
-            table += '</tbody></table>';
-            $("#search_results").append(table);
+    // ****************************************
+    // List All Promotions (all statuses)
+    // ****************************************
+
+    $("#list-all-btn").click(function () {
+        $("#flash_message").empty();
+
+        let ajax = $.ajax({
+            type: "GET",
+            url: "/api/promotions?role=manager",  // manager sees ALL promotions
+            contentType: "application/json",
+            data: ""
+        });
+
+        ajax.done(function(res){
+            // Same table, same tbody
+            $("#results-body").empty();
+
+            let firstPromotion = null;
+
+            for (let i = 0; i < res.length; i++) {
+                let promotion = res[i];
+                let expiration = promotion.expiration_date
+                    ? new Date(promotion.expiration_date).toLocaleString()
+                    : "";
+
+                let row = `
+                    <tr id="row_${i}">
+                        <td>${promotion.id}</td>
+                        <td>${promotion.product_name}</td>
+                        <td>${promotion.description || ""}</td>
+                        <td>${promotion.original_price}</td>
+                        <td>${promotion.discount_value || ""}</td>
+                        <td>${promotion.discount_type || ""}</td>
+                        <td>${promotion.promotion_type}</td>
+                        <td>${promotion.status}</td>
+                        <td>${expiration}</td>
+                        <td>
+                            <button class="btn btn-default btn-sm duplicate-btn"
+                                    data-id="${promotion.id}">
+                                Duplicate
+                            </button>
+                        </td>
+                    </tr>
+                `;
+
+                $("#results-body").append(row);
+
+                if (i === 0) {
+                    firstPromotion = promotion;
+                }
+            }
 
             if (firstPromotion) {
                 update_form_data(firstPromotion);
@@ -288,7 +379,39 @@ $(document).ready(function () {
         ajax.fail(function(res){
             flash_message(res.responseJSON.message);
         });
+    });
 
+    // ****************************************
+    // Duplicate a Promotion from Search Results
+    // ****************************************
+
+    $(document).on("click", ".duplicate-btn", function () {
+        let promotion_id = $(this).data("id");
+        $("#flash_message").empty();
+
+        let ajax = $.ajax({
+            type: "POST",
+            url: `/api/promotions/${promotion_id}/duplicate`,
+            contentType: "application/json",
+            headers: {
+                "X-Role": "administrator"   // required by your routes.py
+            },
+            data: JSON.stringify({})       // endpoint expects JSON body
+        });
+
+        ajax.done(function(res){
+            // Load duplicated promotion into the form
+            update_form_data(res);
+            flash_message(`Promotion duplicated (new ID ${res.id})`);
+        });
+
+        ajax.fail(function(res){
+            if (res.responseJSON && res.responseJSON.message) {
+                flash_message(res.responseJSON.message);
+            } else {
+                flash_message("Error duplicating promotion");
+            }
+        });
     });
 
 });

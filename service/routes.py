@@ -3,17 +3,26 @@
 ######################################################################
 
 """
-RESTX version of Promotions API routes.
-This module defines all API endpoints for managing promotions.
+Promotions Service with Swagger
+
+Paths:
+------
+GET / - Displays a UI
+GET /promotions - Returns a list all of the Promotions
+GET /promotions/{id} - Returns the Promotions with a given id number
+POST /promotions - creates a new Promotions record in the database
+PUT /promotions/{id} - updates a Promotions record in the database
+DELETE /promotions/{id} - deletes a Promotions record in the database
+POST /promotions/{id} - duplicates a Promotions record in the database
 """
 
 import logging
 from datetime import datetime
-from flask import jsonify, request
+from flask import request
 from flask import current_app as app
-from flask_restx import Resource, Api
+from flask_restx import Resource, Api, fields
 from werkzeug.exceptions import NotFound, BadRequest, MethodNotAllowed, UnsupportedMediaType, InternalServerError
-from service.models import Promotion, StatusEnum, db
+from service.models import Promotion, StatusEnum, db, DiscountTypeEnum, PromotionTypeEnum
 from service.common import status
 
 
@@ -31,13 +40,14 @@ def error_response(error: str, message: str, code: int):
 ######################################################################
 # Swagger & RESTX API Initialization
 ######################################################################
+
 authorizations = {
     "apikey": {"type": "apiKey", "in": "header", "name": "X-Role"}
 }
 
 api = Api(
     app,
-    version="1.0",
+    version="1.0.0",
     title="Promotions API",
     description="RESTX API for Promotions Service",
     doc="/apidocs",
@@ -45,6 +55,30 @@ api = Api(
     prefix="/api",
     default="Promotions",
     default_label="Promotions API operations"
+)
+
+promotion_create_model = api.model(
+    "Promotion",
+    {
+        "id": fields.Integer(required=True, description="ID for the promotion"),
+        "product_name": fields.String(required=True, description="The name of the promotion's product"),
+        "description": fields.String(
+            required=False, description="Description of the Promotion"
+        ),
+        "original_price": fields.Float(required=True, description="Original price of the product"),
+        "discount_value": fields.Float(required=False, description="Value of the discount"),
+        "discount_type": fields.String(
+            required=False, enum=DiscountTypeEnum._member_names_, description="Type of the discount"
+        ),
+        "promotion_type": fields.String(
+            required=True, enum=PromotionTypeEnum._member_names_, description="Type of the promotion"
+        ),
+        "start_date": fields.Date(required=False, description="Start date"),
+        "expiration_date": fields.Date(required=True, description="Expiration date"),
+        "status": fields.String(
+            required=True, enum=StatusEnum._member_names_, description="Status of the promotion"
+        ),
+    },
 )
 
 
@@ -88,16 +122,7 @@ def handle_internal_server_error(error):
 @app.route("/", methods=["GET"])
 def index():
     """Root URL for the Promotions microservice"""
-    logger.info("Root URL accessed.")
-    # Construct the list URL manually to avoid RESTX endpoint name issues
-    base_url = request.url_root.rstrip("/")
-    response = {
-        "service": "Promotions REST API Service",
-        "version": "1.0",
-        "description": "This service allows CRUD operations on promotions",
-        "list_url": f"{base_url}/api/promotions",
-    }
-    return jsonify(response), status.HTTP_200_OK
+    return app.send_static_file("index.html")
 
 
 ######################################################################
@@ -175,6 +200,7 @@ class PromotionCollection(Resource):
         return results, status.HTTP_200_OK
 
     @api.doc("create_promotion")
+    @api.expect(promotion_create_model)
     def post(self):
         """Create a new promotion."""
         if not request.is_json:
@@ -225,6 +251,7 @@ class PromotionResource(Resource):
         return promotion.serialize(), status.HTTP_200_OK
 
     @api.doc("update_promotion")
+    @api.expect(promotion_create_model)
     def put(self, promotion_id):
         """Update an existing promotion."""
         if not request.is_json:
@@ -273,7 +300,7 @@ class PromotionDuplicate(Resource):
 
     @api.doc("duplicate_promotion")
     def post(self, promotion_id):
-        """Duplicate a promotion after permission & data validation."""
+        """Duplicate a promotion after data validation."""
         # -------- Authentication --------
         role = request.headers.get("X-Role")
         if not role:
@@ -301,8 +328,7 @@ class PromotionDuplicate(Resource):
         # -------- Duplicate --------
         new_promotion, error_code, error_type, error_message = (
             Promotion.duplicate_promotion_with_error_handling(
-                promotion_id, request.get_json()
-            )
+                promotion_id)
         )
 
         if error_code:
