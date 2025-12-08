@@ -66,15 +66,15 @@ promotion_create_model = api.model(
             required=False, description="Description of the Promotion"
         ),
         "original_price": fields.Float(required=True, description="Original price of the product"),
-        "discount_value": fields.Float(required=True, description="Value of the discount"),
+        "discount_value": fields.Float(required=False, description="Value of the discount"),
         "discount_type": fields.String(
-            required=True, enum=DiscountTypeEnum._member_names_, description="Type of the discount"
+            required=False, enum=DiscountTypeEnum._member_names_, description="Type of the discount"
         ),
         "promotion_type": fields.String(
             required=True, enum=PromotionTypeEnum._member_names_, description="Type of the promotion"
         ),
         "start_date": fields.Date(required=False, description="Start date"),
-        "expiration_date": fields.Date(required=False, description="Expiration date"),
+        "expiration_date": fields.Date(required=True, description="Expiration date"),
         "status": fields.String(
             required=True, enum=StatusEnum._member_names_, description="Status of the promotion"
         ),

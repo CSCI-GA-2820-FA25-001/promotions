@@ -48,8 +48,6 @@ $(document).ready(function () {
         let required_fields = [
             "#promotions_product_name",
             "#promotions_original_price",
-            "#promotions_discount_value",
-            "#promotions_discount_type",
             "#promotions_promotion_type",
             "#promotions_status",
             "#promotions_expiration_date"
