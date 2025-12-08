@@ -72,3 +72,13 @@ Scenario: Delete a Promotion
     Then I should see "Promotion has been Deleted!"
     When I press the "Search" button
     Then I should not see "Orange" in the results
+
+Scenario: Duplicate a promotion from the search results
+    When I visit the "Home Page"
+    And I set the "Product Name" to "Apple"
+    And I press the "Search" button
+    Then I should see "Success"
+    And I should see "Apple" in the results
+    When I press the "Duplicate" button for "Apple"
+    Then I should see "Promotion duplicated"
+

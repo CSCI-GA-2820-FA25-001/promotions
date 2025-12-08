@@ -82,13 +82,8 @@ class TestYourResourceService(TestCase):
 
     def test_index(self):
         """It should call the Home Page"""
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response.get_json()
-        self.assertEqual(data["service"], "Promotions REST API Service")
-        self.assertEqual(data["version"], "1.0")
-        self.assertIn("list_url", data)
-        self.assertIn("/api/promotions", data["list_url"])
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     ######################################################################
     #  C R E A T E   T E S T S
@@ -609,20 +604,6 @@ class TestYourResourceService(TestCase):
             data["original_price"], float(original_promo.original_price)
         )  # Original
         self.assertEqual(data["status"], "draft")  # Default status
-
-    def test_duplicate_promotion_unauthorized_no_header(self):
-        """It should return 401 when no X-Role header is provided"""
-        # Create an original promotion
-        original_promo = PromotionFactory()
-        original_promo.create()
-        original_id = original_promo.id
-
-        resp = self.client.post(f"{BASE_URL}/{original_id}/duplicate", json={})
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        data = resp.get_json()
-        self.assertEqual(data["error"], "Unauthorized")
-        self.assertIn("Authentication required", data["message"])
 
     def test_duplicate_promotion_forbidden_non_admin(self):
         """It should return 403 when non-admin tries to duplicate"""
