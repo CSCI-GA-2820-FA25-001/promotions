@@ -64,3 +64,37 @@ spec:
       workspaces:
         - name: output
           workspace: pipeline-workspace
+    - name: pylint
+      params:
+        - name: image
+          value: 'quay.io/rofrano/python:3.11-slim'
+        - name: path
+          value: .service
+        - name: args
+          value: []
+        - name: requirements-file
+          value: requirements.txt
+      runAfter:
+        - git-clone
+      taskRef:
+        kind: Task
+        name: pylint
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+    - name: pytest
+      params:
+        - name: pytest-args
+          value: []
+        - name: secret-name
+          value: postgres-creds
+        - name: secret-key
+          value: database_uri
+      runAfter:
+        - git-clone
+      taskRef:
+        kind: Task
+        name: pytest-env
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
