@@ -33,7 +33,10 @@ spec:
         - name: GUNICORN_BIND
           value: "0.0.0.0:8080"
         - name: DATABASE_URI
-          value: "postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/promotions"
+          valueFrom:
+            secretKeyRef:
+              name: postgres-creds
+              key: database_uri
         resources:
           limits:
             cpu: "0.5"
