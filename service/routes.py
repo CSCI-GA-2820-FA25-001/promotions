@@ -8,12 +8,12 @@ Promotions Service with Swagger
 Paths:
 ------
 GET / - Displays a UI
-GET /pets - Returns a list all of the Promotions
-GET /pets/{id} - Returns the Promotions with a given id number
-POST /pets - creates a new Promotions record in the database
-PUT /pets/{id} - updates a Promotions record in the database
-DELETE /pets/{id} - deletes a Promotions record in the database
-POST /pets/{id} - duplicates a Promotions record in the database
+GET /promotions - Returns a list all of the Promotions
+GET /promotions/{id} - Returns the Promotions with a given id number
+POST /promotions - creates a new Promotions record in the database
+PUT /promotions/{id} - updates a Promotions record in the database
+DELETE /promotions/{id} - deletes a Promotions record in the database
+POST /promotions/{id} - duplicates a Promotions record in the database
 """
 
 import logging
