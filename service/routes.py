@@ -365,6 +365,13 @@ class PromotionReset(Resource):
 ######################################################################
 # Health Endpoint
 ######################################################################
+# @api.route("/health")
+# class Health(Resource):
+#     """Health check endpoint."""
+
+#     def get(self):
+#         """Return service health status."""
+#         return {"status": "OK"}, status.HTTP_200_OK
 
 @app.route("/health")
 def health():
