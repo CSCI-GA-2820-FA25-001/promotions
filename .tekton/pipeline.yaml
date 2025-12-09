@@ -19,6 +19,10 @@ spec:
       description: the name of the image to build
       name: IMAGE_NAME
       type: string
+    - default: 'https://promotions-sp8443-dev.apps.rm2.thpm.p1.openshiftapps.com'
+      description: The URL of the service
+      name: APP_URL
+      type: string
   tasks:
     - name: git-clone
       params:
