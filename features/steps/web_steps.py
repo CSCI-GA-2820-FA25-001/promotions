@@ -11,9 +11,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-BASE_URL = "http://localhost:8080"
+# BASE_URL = "http://localhost:8080"
 
-ID_PREFIX = "promotions_"     # ← FIXED: must match your HTML
+ID_PREFIX = "promotions_"  # ← FIXED: must match your HTML
 
 
 ##################################################################
@@ -21,7 +21,7 @@ ID_PREFIX = "promotions_"     # ← FIXED: must match your HTML
 ##################################################################
 @when('I visit the "Home Page"')
 def step_impl(context):
-    context.driver.get(BASE_URL)
+    context.driver.get(context.base_url)
 
 
 ##################################################################
@@ -41,7 +41,9 @@ def step_impl(context, element_name, text_string):
     element = context.driver.find_element(By.ID, element_id)
     # element.clear()
     # element.send_keys(text_string)
-    context.driver.execute_script("arguments[0].value = arguments[1];", element, text_string)
+    context.driver.execute_script(
+        "arguments[0].value = arguments[1];", element, text_string
+    )
 
 
 ##################################################################
@@ -115,6 +117,7 @@ def step_impl(context, button):
     button_id = button.lower().replace(" ", "_") + "-btn"
     context.driver.find_element(By.ID, button_id).click()
 
+
 @when('I press the "Duplicate" button for "{product_name}"')
 def step_impl(context, product_name):
     table = context.driver.find_element(By.ID, "search_results")
@@ -131,11 +134,12 @@ def step_impl(context, product_name):
             target_row = row
             break
 
-    assert target_row is not None, f'Row for product "{product_name}" not found in results'
+    assert (
+        target_row is not None
+    ), f'Row for product "{product_name}" not found in results'
 
     duplicate_button = target_row.find_element(By.CSS_SELECTOR, ".duplicate-btn")
     duplicate_button.click()
-
 
 
 ##################################################################
@@ -178,6 +182,7 @@ def step_impl(context, name):
 def step_impl(context, name):
     table = context.driver.find_element(By.ID, "search_results")
     assert name not in table.text
+
 
 @then('I should not see "404 Not Found"')
 def step_impl(context):
