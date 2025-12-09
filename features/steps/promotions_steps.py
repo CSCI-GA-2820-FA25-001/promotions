@@ -3,13 +3,14 @@ import requests
 import json
 from urllib.parse import urljoin
 
-BASE_URL = "http://localhost:8080/api"
+# context.base_url = "http://localhost:8080/api"
+
 
 ######################################################################
 # Reset DB
 ######################################################################
-def reset_database():
-    resp = requests.delete(f"{BASE_URL}/promotions/reset")
+def reset_database(context):
+    resp = requests.delete(f"{context.base_url}/api/promotions/reset")
     assert resp.status_code in (200, 204), f"Reset failed: {resp.status_code}"
     return resp
 
@@ -17,10 +18,10 @@ def reset_database():
 ######################################################################
 # GIVEN — seed
 ######################################################################
-@given('the following promotions')
+@given("the following promotions")
 def step_impl(context):
 
-    reset_database()
+    reset_database(context)
 
     for row in context.table:
 
@@ -29,14 +30,16 @@ def step_impl(context):
             "description": row["description"],
             "promotion_type": row["promotion_type"],
             "original_price": float(row["original_price"]),
-            "discount_value": float(row["discount_value"]) if row["discount_value"] else None,
+            "discount_value": (
+                float(row["discount_value"]) if row["discount_value"] else None
+            ),
             "discount_type": row["discount_type"] or None,
             "expiration_date": row["expiration_date"],
             "status": row["status"],
         }
 
         resp = requests.post(
-            f"{BASE_URL}/promotions",
+            f"{context.base_url}/api/promotions",
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
         )
@@ -47,7 +50,7 @@ def step_impl(context):
 ######################################################################
 # WHEN — create
 ######################################################################
-@when('I create a promotion with:')
+@when("I create a promotion with:")
 def step_impl(context):
     for row in context.table:
 
@@ -56,14 +59,16 @@ def step_impl(context):
             "description": row["description"],
             "promotion_type": row["promotion_type"],
             "original_price": float(row["original_price"]),
-            "discount_value": float(row["discount_value"]) if row["discount_value"] else None,
+            "discount_value": (
+                float(row["discount_value"]) if row["discount_value"] else None
+            ),
             "discount_type": row["discount_type"] or None,
             "expiration_date": row["expiration_date"],
             "status": row["status"],
         }
 
         context.resp = requests.post(
-            f"{BASE_URL}/promotions",
+            f"{context.base_url}/api/promotions",
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
         )
@@ -74,7 +79,7 @@ def step_impl(context):
 ######################################################################
 @when('I retrieve promotion "{id}"')
 def step_impl(context, id):
-    context.resp = requests.get(f"{BASE_URL}/promotions/{id}")
+    context.resp = requests.get(f"{context.base_url}/api/promotions/{id}")
 
 
 ######################################################################
@@ -82,15 +87,15 @@ def step_impl(context, id):
 ######################################################################
 @when('I delete promotion "{id}"')
 def step_impl(context, id):
-    context.resp = requests.delete(f"{BASE_URL}/promotions/{id}")
+    context.resp = requests.delete(f"{context.base_url}/api/promotions/{id}")
 
 
 ######################################################################
 # WHEN — list
 ######################################################################
-@when('I list all promotions')
+@when("I list all promotions")
 def step_impl(context):
-    context.resp = requests.get(f"{BASE_URL}/promotions?role=manager")
+    context.resp = requests.get(f"{context.base_url}/api/promotions?role=manager")
 
 
 ######################################################################
@@ -98,8 +103,9 @@ def step_impl(context):
 ######################################################################
 @then('the status code should be "{code}"')
 def step_impl(context, code):
-    assert str(context.resp.status_code) == code, \
-        f"Expected {code}, got {context.resp.status_code}. Body: {context.resp.text}"
+    assert (
+        str(context.resp.status_code) == code
+    ), f"Expected {code}, got {context.resp.status_code}. Body: {context.resp.text}"
 
 
 ######################################################################
