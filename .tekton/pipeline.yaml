@@ -152,5 +152,21 @@ spec:
       workspaces:
         - name: source
           workspace: pipeline-workspace
+    - name: behave
+      params:
+        - name: base-url
+          value: $(params.APP_URL)
+        - name: wait-seconds
+          value: '60'
+        - name: driver
+          value: chrome
+      runAfter:
+        - deploy-image
+      taskRef:
+        kind: Task
+        name: behave
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
   workspaces:
     - name: pipeline-workspace
