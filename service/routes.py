@@ -372,3 +372,8 @@ class Health(Resource):
     def get(self):
         """Return service health status."""
         return {"status": "OK"}, status.HTTP_200_OK
+
+@app.route("/health")
+def health():
+    """Plain health check used by Kubernetes probes."""
+    return jsonify(status="OK"), status.HTTP_200_OK

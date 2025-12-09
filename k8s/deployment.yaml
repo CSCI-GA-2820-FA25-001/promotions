@@ -47,13 +47,13 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 60
           httpGet:
-            path: /api/health
+            path: /health
             port: 8080
         livenessProbe:  
           initialDelaySeconds: 30  
           periodSeconds: 60  
           httpGet:
-            path: /api/health
+            path: /health
             port: 8080
         resources:
           limits:
