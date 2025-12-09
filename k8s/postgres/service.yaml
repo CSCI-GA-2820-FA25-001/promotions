@@ -6,11 +6,9 @@ metadata:
     app: postgres
 spec:
   type: ClusterIP
-  clusterIP: None  # Headless service for StatefulSet
+  clusterIP: None  # Headless service for StatefulSet (required for StatefulSet)
   selector:
     app: postgres
   ports:
-    - name: postgres
-      port: 5432
+    - port: 5432
       targetPort: 5432
-      protocol: TCP
