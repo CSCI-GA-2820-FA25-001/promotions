@@ -7,9 +7,10 @@ metadata:
 spec:
   selector:
     app: promotions
+  type: ClusterIP
+  internalTrafficPolicy: Cluster
   ports:
-    - name: http
+    - name: 8080-tcp
       protocol: TCP
       port: 8080
       targetPort: 8080
-  type: ClusterIP

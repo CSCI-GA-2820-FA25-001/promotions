@@ -1,13 +1,7 @@
-# Note: This PVC is kept for backward compatibility
-# The StatefulSet now uses volumeClaimTemplates which creates PVCs automatically
-# This file can be removed if using StatefulSet with volumeClaimTemplates
----
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
-  labels:
-    app: postgres
 spec:
   accessModes:
     - ReadWriteOnce
