@@ -18,7 +18,7 @@ POST /promotions/{id} - duplicates a Promotions record in the database
 
 import logging
 from datetime import datetime
-from flask import request
+from flask import jsonify, request
 from flask import current_app as app
 from flask_restx import Resource, Api, fields
 from werkzeug.exceptions import NotFound, BadRequest, MethodNotAllowed, UnsupportedMediaType, InternalServerError
@@ -365,10 +365,15 @@ class PromotionReset(Resource):
 ######################################################################
 # Health Endpoint
 ######################################################################
-@api.route("/health")
-class Health(Resource):
-    """Health check endpoint."""
+# @api.route("/health")
+# class Health(Resource):
+#     """Health check endpoint."""
 
-    def get(self):
-        """Return service health status."""
-        return {"status": "OK"}, status.HTTP_200_OK
+#     def get(self):
+#         """Return service health status."""
+#         return {"status": "OK"}, status.HTTP_200_OK
+
+@app.route("/health")
+def health():
+    """Plain health check used by Kubernetes probes."""
+    return jsonify(status="OK"), status.HTTP_200_OK

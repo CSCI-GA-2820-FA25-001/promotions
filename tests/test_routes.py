@@ -807,7 +807,7 @@ class TestYourResourceService(TestCase):
     ######################################################################
     def test_health_endpoint(self):
         """Test the /health endpoint"""
-        resp = self.client.get("/api/health")
+        resp = self.client.get("/health")
         assert resp.status_code == 200
         assert resp.get_json() == {"status": "OK"}
 
